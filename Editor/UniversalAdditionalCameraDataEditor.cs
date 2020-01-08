@@ -9,7 +9,10 @@ namespace UnityEditor.Rendering.Universal
     {
         public override void OnInspectorGUI()
         {
+            var asset = (UniversalAdditionalCameraData)target;
+            asset.requiresTransparentOption = (CameraOverrideOption)EditorGUILayout.EnumPopup("Transparent Copy", asset.requiresTransparentOption);
         }
+
         [MenuItem("CONTEXT/UniversalAdditionalCameraData/Remove Component")]
         static void RemoveComponent(MenuCommand command)
         {

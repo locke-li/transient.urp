@@ -294,6 +294,7 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.maxShadowDistance = (additionalCameraData.renderShadows) ? cameraData.maxShadowDistance : 0.0f;
                 cameraData.requiresDepthTexture = additionalCameraData.requiresDepthTexture;
                 cameraData.requiresOpaqueTexture = additionalCameraData.requiresColorTexture;
+                cameraData.requiresTransparentTexture = additionalCameraData.requiresTransparentTexture;
                 cameraData.volumeLayerMask = additionalCameraData.volumeLayerMask;
                 cameraData.volumeTrigger = additionalCameraData.volumeTrigger == null ? camera.transform : additionalCameraData.volumeTrigger;
                 cameraData.postProcessEnabled = additionalCameraData.renderPostProcessing;
@@ -306,6 +307,7 @@ namespace UnityEngine.Rendering.Universal
             {
                 cameraData.requiresDepthTexture = settings.supportsCameraDepthTexture;
                 cameraData.requiresOpaqueTexture = settings.supportsCameraOpaqueTexture;
+                cameraData.requiresTransparentTexture = settings.supportsCameraOpaqueTexture;
                 cameraData.volumeLayerMask = 1; // "Default"
                 cameraData.volumeTrigger = null;
                 cameraData.postProcessEnabled = CoreUtils.ArePostProcessesEnabled(camera);

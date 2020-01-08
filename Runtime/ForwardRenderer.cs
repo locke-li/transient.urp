@@ -21,6 +21,7 @@ namespace UnityEngine.Rendering.Universal
         DrawSkyboxPass m_DrawSkyboxPass;
         CopyDepthPass m_CopyDepthPass;
         CopyColorPass m_CopyColorPass;
+        CopyColorPass m_CopyColorTransparentPass;
         DrawObjectsPass m_RenderTransparentForwardPass;
         InvokeOnRenderObjectCallbackPass m_OnRenderObjectCallbackPass;
         PostProcessPass m_PostProcessPass;
@@ -37,7 +38,7 @@ namespace UnityEngine.Rendering.Universal
         RenderTargetHandle m_CameraColorAttachment;
         RenderTargetHandle m_CameraDepthAttachment;
         RenderTargetHandle m_DepthTexture;
-        RenderTargetHandle m_OpaqueColor;
+        RenderTargetHandle m_ColorCopyTexture;
         RenderTargetHandle m_AfterPostProcessColor;
         RenderTargetHandle m_ColorGradingLut;
 
@@ -71,6 +72,7 @@ namespace UnityEngine.Rendering.Universal
             m_DrawSkyboxPass = new DrawSkyboxPass(RenderPassEvent.BeforeRenderingSkybox);
             m_CopyColorPass = new CopyColorPass(RenderPassEvent.BeforeRenderingTransparents, samplingMaterial);
             m_RenderTransparentForwardPass = new DrawObjectsPass("Render Transparents", false, RenderPassEvent.BeforeRenderingTransparents, RenderQueueRange.transparent, data.transparentLayerMask, m_DefaultStencilState, stencilData.stencilReference);
+            m_CopyColorTransparentPass = new CopyColorPass(RenderPassEvent.AfterRenderingTransparents, samplingMaterial);
             m_OnRenderObjectCallbackPass = new InvokeOnRenderObjectCallbackPass(RenderPassEvent.BeforeRenderingPostProcessing);
             m_PostProcessPass = new PostProcessPass(RenderPassEvent.BeforeRenderingPostProcessing, data.postProcessData);
             m_FinalPostProcessPass = new PostProcessPass(RenderPassEvent.AfterRenderingPostProcessing, data.postProcessData);
@@ -86,7 +88,7 @@ namespace UnityEngine.Rendering.Universal
             m_CameraColorAttachment.Init("_CameraColorTexture");
             m_CameraDepthAttachment.Init("_CameraDepthAttachment");
             m_DepthTexture.Init("_CameraDepthTexture");
-            m_OpaqueColor.Init("_CameraOpaqueTexture");
+            m_ColorCopyTexture.Init("_CameraColorCopy");
             m_AfterPostProcessColor.Init("_AfterPostProcessTexture");
             m_ColorGradingLut.Init("_InternalGradingLut");
             m_ForwardLights = new ForwardLights();
@@ -205,14 +207,23 @@ namespace UnityEngine.Rendering.Universal
 
             if (renderingData.cameraData.requiresOpaqueTexture)
             {
-                // TODO: Downsampling method should be store in the renderer isntead of in the asset.
+                // TODO: Downsampling method should be stored in the renderer instead of in the asset.
                 // We need to migrate this data to renderer. For now, we query the method in the active asset.
                 Downsampling downsamplingMethod = UniversalRenderPipeline.asset.opaqueDownsampling;
-                m_CopyColorPass.Setup(m_ActiveCameraColorAttachment.Identifier(), m_OpaqueColor, downsamplingMethod);
+                m_CopyColorPass.Setup(m_ActiveCameraColorAttachment.Identifier(), m_ColorCopyTexture, downsamplingMethod);
                 EnqueuePass(m_CopyColorPass);
             }
 
             EnqueuePass(m_RenderTransparentForwardPass);
+
+            //copied from the above code of requireing opaque texture
+            if (renderingData.cameraData.requiresTransparentTexture) {
+                Downsampling downsamplingMethod = UniversalRenderPipeline.asset.opaqueDownsampling;
+                m_CopyColorTransparentPass.Setup(m_ActiveCameraColorAttachment.Identifier(), m_ColorCopyTexture, downsamplingMethod);
+                EnqueuePass(m_CopyColorPass);
+            }
+
+            //triggers BeforeRenderingPostProcessing
             EnqueuePass(m_OnRenderObjectCallbackPass);
 
             bool afterRenderExists = renderingData.cameraData.captureActions != null ||

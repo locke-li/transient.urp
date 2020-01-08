@@ -82,9 +82,13 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField]
         CameraOverrideOption m_RequiresDepthTextureOption = CameraOverrideOption.UsePipelineSettings;
 
-        [Tooltip("If enabled opaque color texture will render for this camera and bound as _CameraOpaqueTexture.")]
+        [Tooltip("If enabled opaque color texture will render for this camera and bound as _CameraColorCopy.")]
         [SerializeField]
         CameraOverrideOption m_RequiresOpaqueTextureOption = CameraOverrideOption.UsePipelineSettings;
+
+        [Tooltip("If enabled opaque+transparent color texture will render for this camera and bound as _CameraColorCopy.")]
+        [SerializeField]
+        CameraOverrideOption m_RequiresTransparentTextureOption = CameraOverrideOption.UsePipelineSettings;
 
         [SerializeField] CameraRenderType m_CameraType = CameraRenderType.Base;
         [SerializeField] CameraOutput m_CameraOutput = CameraOutput.Camera;
@@ -141,6 +145,13 @@ namespace UnityEngine.Rendering.Universal
             set => m_RequiresOpaqueTextureOption = value;
         }
 
+        //the above properties are probably used for Camera inspector panel visual override
+        //we have to make do with the editor of this class
+        public CameraOverrideOption requiresTransparentOption {
+            get => m_RequiresTransparentTextureOption;
+            set => m_RequiresTransparentTextureOption = value;
+        }
+
         public CameraRenderType renderType
         {
             get => m_CameraType;
@@ -193,6 +204,18 @@ namespace UnityEngine.Rendering.Universal
                 }
             }
             set { m_RequiresOpaqueTextureOption = (value) ? CameraOverrideOption.On : CameraOverrideOption.Off; }
+        }
+
+        public bool requiresTransparentTexture {
+            get {
+                if (m_RequiresTransparentTextureOption == CameraOverrideOption.UsePipelineSettings) {
+                    return UniversalRenderPipeline.asset.supportsCameraTransparentTexture;
+                }
+                else {
+                    return m_RequiresTransparentTextureOption == CameraOverrideOption.On;
+                }
+            }
+            set { m_RequiresTransparentTextureOption = (value) ? CameraOverrideOption.On : CameraOverrideOption.Off; }
         }
 
         public ScriptableRenderer scriptableRenderer
