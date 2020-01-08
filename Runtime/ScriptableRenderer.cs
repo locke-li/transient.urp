@@ -276,13 +276,6 @@ namespace UnityEngine.Rendering.Universal
         /// <returns>A clear flag that tells if color and/or depth should be cleared.</returns>
         protected static ClearFlag GetCameraClearFlag(CameraClearFlags cameraClearFlags)
         {
-#if UNITY_EDITOR
-            // We need public API to tell if FrameDebugger is active and enabled. In that case
-            // we want to force a clear to see properly the drawcall stepping.
-            // For now, to fix FrameDebugger in Editor, we force a clear.
-            cameraClearFlags = CameraClearFlags.SolidColor;
-#endif
-
             // Universal RP doesn't support CameraClearFlags.DepthOnly and CameraClearFlags.Nothing.
             // CameraClearFlags.DepthOnly has the same effect of CameraClearFlags.SolidColor
             // CameraClearFlags.Nothing clears Depth on PC/Desktop and in mobile it clears both
@@ -302,12 +295,9 @@ namespace UnityEngine.Rendering.Universal
             // RenderBufferLoadAction.DontCare in Vulkan/Metal behaves as DontCare load action
             // RenderBufferLoadAction.DontCare in GLES behaves as glInvalidateBuffer
 
-            // Always clear on first render pass in mobile as it's same perf of DontCare and avoid tile clearing issues.
-            if (Application.isMobilePlatform)
-                return ClearFlag.All;
-
             if ((cameraClearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null) ||
-                cameraClearFlags == CameraClearFlags.Nothing)
+                cameraClearFlags == CameraClearFlags.Nothing ||
+                cameraClearFlags == CameraClearFlags.Depth)
                 return ClearFlag.Depth;
 
             return ClearFlag.All;
