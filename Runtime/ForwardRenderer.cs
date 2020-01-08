@@ -220,7 +220,7 @@ namespace UnityEngine.Rendering.Universal
             if (renderingData.cameraData.requiresTransparentTexture) {
                 Downsampling downsamplingMethod = UniversalRenderPipeline.asset.opaqueDownsampling;
                 m_CopyColorTransparentPass.Setup(m_ActiveCameraColorAttachment.Identifier(), m_ColorCopyTexture, downsamplingMethod);
-                EnqueuePass(m_CopyColorPass);
+                EnqueuePass(m_CopyColorTransparentPass);
             }
 
             //triggers BeforeRenderingPostProcessing
