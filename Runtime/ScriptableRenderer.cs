@@ -142,7 +142,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="renderingData">Current render state information.</param>
         /// <seealso cref="ScriptableRenderPass"/>
         /// <seealso cref="ScriptableRendererFeature"/>
-        public abstract void Setup(ScriptableRenderContext context, ref RenderingData renderingData);
+        public abstract void Setup(ScriptableRenderContext context, ref RenderingData renderingData, ref CameraSetupData lastCameraData);
 
         /// <summary>
         /// Override this method to implement the lighting setup for the renderer. You can use this to

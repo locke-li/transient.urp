@@ -27,6 +27,10 @@ namespace UnityEngine.Rendering.Universal
         public bool killAlphaInFinalBlit;
     }
 
+    public struct CameraSetupData {
+        public float renderScale;
+    }
+
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct LightData
     {
         public int mainLightIndex;

@@ -11,13 +11,16 @@ namespace UnityEngine.Rendering.Universal.Internal
     {
         const string m_ProfilerTag = "Final Blit Pass";
         RenderTargetHandle m_Source;
+        Material m_EffectiveBlitMaterial;
         Material m_BlitMaterial;
+        Material m_BlendBlitMaterial;
         TextureDimension m_TargetDimension;
         bool m_IsMobileOrSwitch;
 
-        public FinalBlitPass(RenderPassEvent evt, Material blitMaterial)
+        public FinalBlitPass(RenderPassEvent evt, Material blitMaterial, Material blendBlitMaterial)
         {
             m_BlitMaterial = blitMaterial;
+            m_BlendBlitMaterial = blendBlitMaterial;
             renderPassEvent = evt;
         }
 
@@ -26,10 +29,11 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// </summary>
         /// <param name="baseDescriptor"></param>
         /// <param name="colorHandle"></param>
-        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle)
+        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, bool renderScaleChanged)
         {
             m_Source = colorHandle;
             m_TargetDimension = baseDescriptor.dimension;
+            m_EffectiveBlitMaterial = renderScaleChanged ? m_BlendBlitMaterial : m_BlitMaterial;
             m_IsMobileOrSwitch = Application.isMobilePlatform || Application.platform == RuntimePlatform.Switch;
         }
 
@@ -69,7 +73,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget,
                     RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store,     // color
                     RenderBufferLoadAction.DontCare, RenderBufferStoreAction.DontCare); // depth
-                cmd.Blit(m_Source.Identifier(), BuiltinRenderTextureType.CameraTarget, blitMaterial);
+                cmd.Blit(m_Source.Identifier(), BuiltinRenderTextureType.CameraTarget, m_EffectiveBlitMaterial);
             }
             else
             {
@@ -88,7 +92,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 Camera camera = cameraData.camera;
                 cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
                 cmd.SetViewport(cameraData.camera.pixelRect);
-                cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, blitMaterial);
+                cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, m_EffectiveBlitMaterial);
                 cmd.SetViewProjectionMatrices(camera.worldToCameraMatrix, camera.projectionMatrix);
             }
 

@@ -25,7 +25,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
             m_Render2DLightingPass = new Render2DLightingPass(data);
             m_PostProcessPass = new PostProcessPass(RenderPassEvent.BeforeRenderingPostProcessing, data.postProcessData);
             m_FinalPostProcessPass = new PostProcessPass(RenderPassEvent.AfterRenderingPostProcessing, data.postProcessData);
-            m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering, CoreUtils.CreateEngineMaterial(data.blitShader));
+            m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering, CoreUtils.CreateEngineMaterial(data.blitShader), null);
 
             m_UseDepthStencilBuffer = data.useDepthStencilBuffer;
 
@@ -40,7 +40,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
             return m_Renderer2DData;
         }
 
-        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData)
+        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData, ref CameraSetupData lastCameraData)
         {
             ref CameraData cameraData = ref renderingData.cameraData;
             ref var cameraTargetDescriptor = ref cameraData.cameraTargetDescriptor;
@@ -137,7 +137,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
 
             if (requireFinalBlitPass)
             {
-                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle);
+                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle, false);
                 EnqueuePass(m_FinalBlitPass);
             }
         }

@@ -48,6 +48,7 @@ namespace UnityEngine.Rendering.Universal
         public ForwardRenderer(ForwardRendererData data) : base(data)
         {
             Material blitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blitPS);
+            Material blendBlitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blendBlitPS);
             Material copyDepthMaterial = CoreUtils.CreateEngineMaterial(data.shaders.copyDepthPS);
             Material samplingMaterial = CoreUtils.CreateEngineMaterial(data.shaders.samplingPS);
             Material screenspaceShadowsMaterial = CoreUtils.CreateEngineMaterial(data.shaders.screenSpaceShadowPS);
@@ -77,7 +78,7 @@ namespace UnityEngine.Rendering.Universal
             m_PostProcessPass = new PostProcessPass(RenderPassEvent.BeforeRenderingPostProcessing, data.postProcessData);
             m_FinalPostProcessPass = new PostProcessPass(RenderPassEvent.AfterRenderingPostProcessing, data.postProcessData);
             m_CapturePass = new CapturePass(RenderPassEvent.AfterRendering);
-            m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering, blitMaterial);
+            m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering, blitMaterial, blendBlitMaterial);
 
 #if UNITY_EDITOR
             m_SceneViewDepthCopyPass = new SceneViewDepthCopyPass(RenderPassEvent.AfterRendering + 9, copyDepthMaterial);
@@ -95,11 +96,14 @@ namespace UnityEngine.Rendering.Universal
         }
 
         /// <inheritdoc />
-        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData)
+        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData, ref CameraSetupData lastCameraData)
         {
             Camera camera = renderingData.cameraData.camera;
             ref CameraData cameraData = ref renderingData.cameraData;
             RenderTextureDescriptor cameraTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
+
+            bool renderScaleChanged = lastCameraData.renderScale > 0 && cameraData.renderScale != lastCameraData.renderScale;
+            lastCameraData.renderScale = cameraData.renderScale;
 
             // Special path for depth only offscreen cameras. Only write opaques + transparents. 
             bool isOffscreenDepthTexture = camera.targetTexture != null && camera.targetTexture.format == RenderTextureFormat.Depth;
@@ -133,8 +137,7 @@ namespace UnityEngine.Rendering.Universal
             if (cameraData.isStereoEnabled && cameraData.requiresDepthTexture)
                 requiresDepthPrepass = true;
 
-            bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData, cameraTargetDescriptor)
-                                      || rendererFeatures.Count != 0;
+            bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData, cameraTargetDescriptor);
 
             // If camera requires depth and there's no depth pre-pass we create a depth texture that can be read
             // later by effect requiring it.
@@ -145,6 +148,7 @@ namespace UnityEngine.Rendering.Universal
             m_ActiveCameraDepthAttachment = (createDepthTexture) ? m_CameraDepthAttachment : RenderTargetHandle.CameraTarget;
             bool intermediateRenderTexture = createColorTexture || createDepthTexture;
             
+            //TODO if renderScaleChanged, clear rt, else, copy?
             if (intermediateRenderTexture)
                 CreateCameraRenderTarget(context, ref cameraData);
 
@@ -216,7 +220,7 @@ namespace UnityEngine.Rendering.Universal
 
             EnqueuePass(m_RenderTransparentForwardPass);
 
-            //copied from the above code of requireing opaque texture
+            //copied from the above code of requiring opaque texture
             if (renderingData.cameraData.requiresTransparentTexture) {
                 Downsampling downsamplingMethod = UniversalRenderPipeline.asset.opaqueDownsampling;
                 m_CopyColorTransparentPass.Setup(m_ActiveCameraColorAttachment.Identifier(), m_ColorCopyTexture, downsamplingMethod);
@@ -260,7 +264,7 @@ namespace UnityEngine.Rendering.Universal
                     }
                     else
                     {
-                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment);
+                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, renderScaleChanged);
                         EnqueuePass(m_FinalBlitPass);
                     }
                 }
@@ -284,7 +288,7 @@ namespace UnityEngine.Rendering.Universal
                 }
                 else if (m_ActiveCameraColorAttachment != RenderTargetHandle.CameraTarget)
                 {
-                    m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment);
+                    m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, renderScaleChanged);
                     EnqueuePass(m_FinalBlitPass);
                 }
             }
@@ -308,7 +312,6 @@ namespace UnityEngine.Rendering.Universal
         public override void SetupCullingParameters(ref ScriptableCullingParameters cullingParameters,
             ref CameraData cameraData)
         {
-            Camera camera = cameraData.camera;
             // TODO: PerObjectCulling also affect reflection probes. Enabling it for now.
             // if (asset.additionalLightsRenderingMode == LightRenderingMode.Disabled ||
             //     asset.maxAdditionalLightsCount == 0)

@@ -11,6 +11,10 @@ namespace UnityEditor.Rendering.Universal
         {
             var asset = (UniversalAdditionalCameraData)target;
             asset.requiresTransparentOption = (CameraOverrideOption)EditorGUILayout.EnumPopup("Transparent Copy", asset.requiresTransparentOption);
+            asset.overrideRenderScale = EditorGUILayout.Toggle("Override Render Scale", asset.overrideRenderScale);
+            EditorGUI.BeginDisabledGroup(!asset.overrideRenderScale);
+            asset.renderScale = EditorGUILayout.Slider("Render Scale", asset.renderScale, 0.05f, 10f);
+            EditorGUI.EndDisabledGroup();
         }
 
         [MenuItem("CONTEXT/UniversalAdditionalCameraData/Remove Component")]

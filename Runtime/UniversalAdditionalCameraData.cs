@@ -104,6 +104,9 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField] bool m_StopNaN = false;
         [SerializeField] bool m_Dithering = false;
 
+        [SerializeField] float m_RenderScale = 1.0f;
+        [SerializeField] bool m_OverrideRenderScale = false;
+
         // Deprecated:
         [FormerlySerializedAs("requiresDepthTexture"), SerializeField]
         bool m_RequiresDepthTexture = false;
@@ -273,6 +276,9 @@ namespace UnityEngine.Rendering.Universal
             get => m_Dithering;
             set => m_Dithering = value;
         }
+
+        public float renderScale { get => m_RenderScale; set => m_RenderScale = value; }
+        public bool overrideRenderScale { get => m_OverrideRenderScale; set => m_OverrideRenderScale = value; }
 
         public void OnBeforeSerialize()
         {

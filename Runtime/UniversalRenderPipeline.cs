@@ -169,6 +169,9 @@ namespace UnityEngine.Rendering.Universal
             SetupPerFrameShaderConstants();
 
             SortCameras(cameras);
+            var lastCameraData = new CameraSetupData() {
+                renderScale = -1
+            };
             foreach (Camera camera in cameras)
             {
                 BeginCameraRendering(renderContext, camera);
@@ -176,7 +179,7 @@ namespace UnityEngine.Rendering.Universal
                 //It should be called before culling to prepare material. When there isn't any VisualEffect component, this method has no effect.
                 VFX.VFXManager.PrepareCamera(camera);
 #endif
-                RenderSingleCamera(renderContext, camera);
+                RenderSingleCamera(renderContext, camera, ref lastCameraData);
 
                 EndCameraRendering(renderContext, camera);
             }
@@ -184,7 +187,7 @@ namespace UnityEngine.Rendering.Universal
             EndFrameRendering(renderContext, cameras);
         }
 
-        public static void RenderSingleCamera(ScriptableRenderContext context, Camera camera)
+        public static void RenderSingleCamera(ScriptableRenderContext context, Camera camera, ref CameraSetupData lastCameraData)
         {
             if (!camera.TryGetCullingParameters(IsStereoEnabled(camera), out var cullingParameters))
                 return;
@@ -224,7 +227,7 @@ namespace UnityEngine.Rendering.Universal
                 var cullResults = context.Cull(ref cullingParameters);
                 InitializeRenderingData(settings, ref cameraData, ref cullResults, out var renderingData);
 
-                renderer.Setup(context, ref renderingData);
+                renderer.Setup(context, ref renderingData, ref lastCameraData);
                 renderer.Execute(context, ref renderingData);
             }
 
@@ -278,19 +281,19 @@ namespace UnityEngine.Rendering.Universal
                 Math.Abs(cameraRect.width) < 1.0f || Math.Abs(cameraRect.height) < 1.0f));
 
             // If XR is enabled, use XR renderScale.
-            // Discard variations lesser than kRenderScaleThreshold.
             // Scale is only enabled for gameview.
+            // limit value to kRenderScaleThreshold.
             float usedRenderScale = XRGraphics.enabled ? XRGraphics.eyeTextureResolutionScale : settings.renderScale;
-            cameraData.renderScale = (Mathf.Abs(1.0f - usedRenderScale) < kRenderScaleThreshold) ? 1.0f : usedRenderScale;
-            cameraData.renderScale = (camera.cameraType == CameraType.Game) ? cameraData.renderScale : 1.0f;
+            cameraData.renderScale = Mathf.Max(kRenderScaleThreshold,
+                                                    (additionalCameraData != null && additionalCameraData.overrideRenderScale) ? additionalCameraData.renderScale :
+                                                    (camera.cameraType == CameraType.Game) ? usedRenderScale : 1.0f);
 
             bool anyShadowsEnabled = settings.supportsMainLightShadows || settings.supportsAdditionalLightShadows;
             cameraData.maxShadowDistance = Mathf.Min(settings.shadowDistance, camera.farClipPlane);
             cameraData.maxShadowDistance = (anyShadowsEnabled && cameraData.maxShadowDistance >= camera.nearClipPlane) ?
                 cameraData.maxShadowDistance : 0.0f;
 
-            if (additionalCameraData != null)
-            {
+            if (additionalCameraData != null) {
                 cameraData.maxShadowDistance = (additionalCameraData.renderShadows) ? cameraData.maxShadowDistance : 0.0f;
                 cameraData.requiresDepthTexture = additionalCameraData.requiresDepthTexture;
                 cameraData.requiresOpaqueTexture = additionalCameraData.requiresColorTexture;
@@ -303,30 +306,19 @@ namespace UnityEngine.Rendering.Universal
                 cameraData.antialiasing = cameraData.postProcessEnabled ? additionalCameraData.antialiasing : AntialiasingMode.None;
                 cameraData.antialiasingQuality = additionalCameraData.antialiasingQuality;
             }
-            else if(camera.cameraType == CameraType.SceneView)
-            {
+            else {
                 cameraData.requiresDepthTexture = settings.supportsCameraDepthTexture;
                 cameraData.requiresOpaqueTexture = settings.supportsCameraOpaqueTexture;
                 cameraData.requiresTransparentTexture = settings.supportsCameraOpaqueTexture;
                 cameraData.volumeLayerMask = 1; // "Default"
                 cameraData.volumeTrigger = null;
-                cameraData.postProcessEnabled = CoreUtils.ArePostProcessesEnabled(camera);
                 cameraData.isStopNaNEnabled = false;
                 cameraData.isDitheringEnabled = false;
                 cameraData.antialiasing = AntialiasingMode.None;
                 cameraData.antialiasingQuality = AntialiasingQuality.High;
-            }
-            else
-            {
-                cameraData.requiresDepthTexture = settings.supportsCameraDepthTexture;
-                cameraData.requiresOpaqueTexture = settings.supportsCameraOpaqueTexture;
-                cameraData.volumeLayerMask = 1; // "Default"
-                cameraData.volumeTrigger = null;
-                cameraData.postProcessEnabled = false;
-                cameraData.isStopNaNEnabled = false;
-                cameraData.isDitheringEnabled = false;
-                cameraData.antialiasing = AntialiasingMode.None;
-                cameraData.antialiasingQuality = AntialiasingQuality.High;
+                if (camera.cameraType == CameraType.SceneView) {
+                    cameraData.postProcessEnabled = CoreUtils.ArePostProcessesEnabled(camera);
+                }
             }
 
             // Disables post if GLes2
