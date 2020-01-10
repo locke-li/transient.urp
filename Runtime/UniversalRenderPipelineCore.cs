@@ -24,10 +24,14 @@ namespace UnityEngine.Rendering.Universal
         public PostProcessingData postProcessingData;
         public bool supportsDynamicBatching;
         public PerObjectData perObjectData;
+        public bool blendIntermediate;
+        public bool copyToIntermediate;
         public bool killAlphaInFinalBlit;
     }
 
     public struct CameraSetupData {
+        public RenderTextureDescriptor renderTargetDescriptor;
+        public bool requireIntermediateRenderTexture;
         public float renderScale;
     }
 

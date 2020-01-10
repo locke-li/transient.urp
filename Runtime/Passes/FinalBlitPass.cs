@@ -29,11 +29,11 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// </summary>
         /// <param name="baseDescriptor"></param>
         /// <param name="colorHandle"></param>
-        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, bool renderScaleChanged)
+        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, bool blendBlit)
         {
             m_Source = colorHandle;
             m_TargetDimension = baseDescriptor.dimension;
-            m_EffectiveBlitMaterial = renderScaleChanged ? m_BlendBlitMaterial : m_BlitMaterial;
+            m_EffectiveBlitMaterial = blendBlit ? m_BlendBlitMaterial : m_BlitMaterial;
             m_IsMobileOrSwitch = Application.isMobilePlatform || Application.platform == RuntimePlatform.Switch;
         }
 

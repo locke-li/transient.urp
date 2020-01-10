@@ -170,7 +170,7 @@ namespace UnityEngine.Rendering.Universal
 
             SortCameras(cameras);
             var lastCameraData = new CameraSetupData() {
-                renderScale = -1
+                renderScale = float.MinValue//value fixed for first camera condition check
             };
             foreach (Camera camera in cameras)
             {
@@ -383,6 +383,10 @@ namespace UnityEngine.Rendering.Universal
 
 			bool isOffscreenCamera = cameraData.camera.targetTexture != null && !cameraData.isSceneViewCamera;
             renderingData.killAlphaInFinalBlit = !Graphics.preserveFramebufferAlpha && PlatformNeedsToKillAlpha() && !isOffscreenCamera;
+
+            //varying between cameras
+            renderingData.blendIntermediate = false;
+            renderingData.copyToIntermediate = false;
         }
 
         static void InitializeShadowData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, bool mainLightCastShadows, bool additionalLightsCastShadows, out ShadowData shadowData)
