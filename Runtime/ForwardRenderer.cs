@@ -168,7 +168,7 @@ namespace UnityEngine.Rendering.Universal
                 //since the main motivation for these is to have non-scaled UI camera (semi-transparent stuff) and scaled scene camera (mostly opaque stuff)
                 //work together, so it may still be useful
                 //
-                //note2: for objects that don't write alpha (e.g. Particle System), this won't work
+                //note2: for objects that don't write alpha (e.g. some Particle Systems with legacy shaders), this won't work
                 renderingData.blendIntermediate = !isFirstCamera && !Mathf.Approximately(cameraData.renderScale, 1f);
             }
 
