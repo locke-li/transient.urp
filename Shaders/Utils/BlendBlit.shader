@@ -8,7 +8,7 @@ Shader "Hidden/Universal Render Pipeline/BlendBlit"
         Pass
         {
             Name "BlendBlit"
-			Blend One SrcAlpha
+			Blend One OneMinusSrcAlpha
             ZTest Always
             ZWrite Off
             Cull Off
@@ -60,8 +60,8 @@ Shader "Hidden/Universal Render Pipeline/BlendBlit"
                 //precision may have been lost dramatically (approximately 2.5% error),
                 //as we convert back and forth multiple times during rendering & blending
                 //also hardware & unity convert functions may be quite different
-                //set color space to linear only reduces the error
-                col.a = SRGBToLinear(1 - col.a);
+                //set color space to linear to reduces the error
+                col.a = LinearToSRGB(col.a);
                 #endif
                 return col;
             }

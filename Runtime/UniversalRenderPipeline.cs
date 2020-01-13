@@ -386,7 +386,6 @@ namespace UnityEngine.Rendering.Universal
 
             //varying between cameras
             renderingData.blendIntermediate = false;
-            renderingData.copyToIntermediate = false;
         }
 
         static void InitializeShadowData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, bool mainLightCastShadows, bool additionalLightsCastShadows, out ShadowData shadowData)

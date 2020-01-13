@@ -13,7 +13,6 @@ namespace UnityEngine.Rendering.Universal
         const string k_CreateCameraTextures = "Create Camera Texture";
 
         ColorGradingLutPass m_ColorGradingLutPass;
-        LoadColorPass m_LoadColorPass;
         DepthOnlyPass m_DepthPrepass;
         MainLightShadowCasterPass m_MainLightShadowCasterPass;
         AdditionalLightsShadowCasterPass m_AdditionalLightsShadowCasterPass;
@@ -39,7 +38,6 @@ namespace UnityEngine.Rendering.Universal
         RenderTargetHandle m_CameraColorAttachment;
         RenderTargetHandle m_CameraDepthAttachment;
         RenderTargetHandle m_DepthTexture;
-        RenderTargetHandle m_LoadColorIntermediate;
         RenderTargetHandle m_ColorCopyTexture;
         RenderTargetHandle m_AfterPostProcessColor;
         RenderTargetHandle m_ColorGradingLut;
@@ -51,7 +49,6 @@ namespace UnityEngine.Rendering.Universal
         {
             Material blitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blitPS);
             Material blendBlitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blendBlitPS);
-            Material blitFlipMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blitFlipPS);
             Material copyDepthMaterial = CoreUtils.CreateEngineMaterial(data.shaders.copyDepthPS);
             Material samplingMaterial = CoreUtils.CreateEngineMaterial(data.shaders.samplingPS);
             Material screenspaceShadowsMaterial = CoreUtils.CreateEngineMaterial(data.shaders.screenSpaceShadowPS);
@@ -68,7 +65,6 @@ namespace UnityEngine.Rendering.Universal
             // we inject the builtin passes in the before events.
             m_MainLightShadowCasterPass = new MainLightShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
             m_AdditionalLightsShadowCasterPass = new AdditionalLightsShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
-            m_LoadColorPass = new LoadColorPass(RenderPassEvent.BeforeRenderingPrepasses, blitFlipMaterial);
             m_DepthPrepass = new DepthOnlyPass(RenderPassEvent.BeforeRenderingPrepasses, RenderQueueRange.opaque, data.opaqueLayerMask);
             m_ScreenSpaceShadowResolvePass = new ScreenSpaceShadowResolvePass(RenderPassEvent.BeforeRenderingPrepasses, screenspaceShadowsMaterial);
             m_ColorGradingLutPass = new ColorGradingLutPass(RenderPassEvent.BeforeRenderingOpaques, data.postProcessData);
@@ -94,7 +90,6 @@ namespace UnityEngine.Rendering.Universal
             m_CameraDepthAttachment.Init("_CameraDepthAttachment");
             m_DepthTexture.Init("_CameraDepthTexture");
             m_ColorCopyTexture.Init("_CameraColorCopy");
-            m_LoadColorIntermediate.Init("_LoadColorIntermediate");
             m_AfterPostProcessColor.Init("_AfterPostProcessTexture");
             m_ColorGradingLut.Init("_InternalGradingLut");
             m_ForwardLights = new ForwardLights();
@@ -156,28 +151,25 @@ namespace UnityEngine.Rendering.Universal
 
             lastCameraData.requireIntermediateRenderTexture = intermediateRenderTexture;
             renderingData.blendIntermediate = false;
-            renderingData.copyToIntermediate = false;
 
             if (intermediateRenderTexture) {
                 CreateCameraRenderTarget(context, ref cameraData);
                 // if isFirstCamera, do nothing
                 // else if renderScaleChanged || no previous RT, clear RT & use blend blit (later in final blit)
-                // else if render target RT object changed, copy
-                // else, reuse previous RT, do nothing
+                // [as it's hard/buggy to copy from screen to a scaled RT, don't copy]
+                // [x]else if render target RT object changed, copy
+                // [can't gaurantee previous RT wasn't changed, don't reuse]
+                // [x]else, reuse previous RT, do nothing
                 //
-                //when blending is used, the problem with gamma value blending causes about 2.5% error on color
-                //even when color space is set to linear.
+                //note1: when blending is used, there is a ~2.5% error on color value in semi-transparent region
+                //due to 1. gamma value blending  2. the render to the RT is actually premultipling alpha
+                //when set linear, the error is minor.
                 //this only affects scaled camera with semi-transparent objects
-                //however, the main motivation for these is to have non-scaled UI camera and scaled scene camera
+                //since the main motivation for these is to have non-scaled UI camera (semi-transparent stuff) and scaled scene camera (mostly opaque stuff)
                 //work together, so it may still be useful
-                renderingData.blendIntermediate = !isFirstCamera && (renderScaleChanged || !lastCameraData.requireIntermediateRenderTexture);
-                renderingData.copyToIntermediate = !renderingData.blendIntermediate && !renderScaleChanged;
-
-                //TODO as it's hard/buggy to copy from screen, do a prepass to determine camera content dependency and create one intermediate RT to render on
-                if (renderingData.copyToIntermediate) {
-                    m_LoadColorPass.Setup(cameraData.cameraTargetDescriptor, m_LoadColorIntermediate, m_ActiveCameraColorAttachment);
-                    EnqueuePass(m_LoadColorPass);
-                }
+                //
+                //note2: for objects that don't write alpha (e.g. Particle System), this won't work
+                renderingData.blendIntermediate = !isFirstCamera && !Mathf.Approximately(cameraData.renderScale, 1f);
             }
 
             ConfigureCameraTarget(m_ActiveCameraColorAttachment.Identifier(), m_ActiveCameraDepthAttachment.Identifier());
@@ -373,6 +365,7 @@ namespace UnityEngine.Rendering.Universal
             {
                 bool useDepthRenderBuffer = m_ActiveCameraDepthAttachment == RenderTargetHandle.CameraTarget;
                 var colorDescriptor = descriptor;
+                colorDescriptor.sRGB = false;
                 colorDescriptor.depthBufferBits = (useDepthRenderBuffer) ? k_DepthStencilBufferBits : 0;
                 cmd.GetTemporaryRT(m_ActiveCameraColorAttachment.id, colorDescriptor, FilterMode.Bilinear);
             }

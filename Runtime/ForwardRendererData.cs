@@ -40,9 +40,6 @@ namespace UnityEngine.Rendering.Universal
             [Reload("Shaders/Utils/BlendBlit.shader")]
             public Shader blendBlitPS;
 
-            [Reload("Shaders/Utils/BlitFlip.shader")]
-            public Shader blitFlipPS;
-
             [Reload("Shaders/Utils/CopyDepth.shader")]
             public Shader copyDepthPS;
 

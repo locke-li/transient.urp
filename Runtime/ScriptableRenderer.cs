@@ -381,8 +381,6 @@ namespace UnityEngine.Rendering.Universal
 
                 if (renderingData.blendIntermediate)
                     clearFlag = ClearFlag.All;
-                else if(clearFlag == ClearFlag.Depth && renderingData.copyToIntermediate)
-                    clearFlag = ClearFlag.None;
 
                 SetRenderTarget(cmd, m_CameraColorTarget, m_CameraDepthTarget, clearFlag,
                     CoreUtils.ConvertSRGBToActiveColorSpace(camera.backgroundColor));
