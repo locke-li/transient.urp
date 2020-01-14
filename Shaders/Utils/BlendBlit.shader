@@ -52,6 +52,7 @@ Shader "Hidden/Universal Render Pipeline/BlendBlit"
 
             half4 Fragment(Varyings input) : SV_Target
             {
+				//TODO sharpening
                 half4 col = SAMPLE_TEXTURE2D(_BlitTex, sampler_BlitTex, input.uv);
                 col.rgb = col.a == 0 ? 0 : col.rgb;
                 #ifdef _LINEAR_TO_SRGB_CONVERSION

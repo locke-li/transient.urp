@@ -169,6 +169,7 @@ namespace UnityEngine.Rendering.Universal
                 //work together, so it may still be useful
                 //
                 //note2: for objects that don't write alpha (e.g. some Particle Systems with legacy shaders), this won't work
+                //note3: a blending mode of 'normal' blending (SrcAlpha OneMinusSrcAlpha) is assumed in the process, other blending mode won't work
                 renderingData.blendIntermediate = !isFirstCamera && !Mathf.Approximately(cameraData.renderScale, 1f);
             }
 
