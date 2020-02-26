@@ -13,6 +13,7 @@ namespace UnityEngine.Rendering.Universal
         const string k_CreateCameraTextures = "Create Camera Texture";
 
         ColorGradingLutPass m_ColorGradingLutPass;
+        LoadColorPass m_LoadColorPass;
         DepthOnlyPass m_DepthPrepass;
         MainLightShadowCasterPass m_MainLightShadowCasterPass;
         AdditionalLightsShadowCasterPass m_AdditionalLightsShadowCasterPass;
@@ -38,6 +39,7 @@ namespace UnityEngine.Rendering.Universal
         RenderTargetHandle m_CameraColorAttachment;
         RenderTargetHandle m_CameraDepthAttachment;
         RenderTargetHandle m_DepthTexture;
+        RenderTargetHandle m_LoadColorIntermediate;
         RenderTargetHandle m_ColorCopyTexture;
         RenderTargetHandle m_AfterPostProcessColor;
         RenderTargetHandle m_ColorGradingLut;
@@ -49,6 +51,7 @@ namespace UnityEngine.Rendering.Universal
         {
             Material blitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blitPS);
             Material blendBlitMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blendBlitPS);
+            Material blitFlipMaterial = CoreUtils.CreateEngineMaterial(data.shaders.blitFlipPS);
             Material copyDepthMaterial = CoreUtils.CreateEngineMaterial(data.shaders.copyDepthPS);
             Material samplingMaterial = CoreUtils.CreateEngineMaterial(data.shaders.samplingPS);
             Material screenspaceShadowsMaterial = CoreUtils.CreateEngineMaterial(data.shaders.screenSpaceShadowPS);
@@ -63,6 +66,7 @@ namespace UnityEngine.Rendering.Universal
 
             // Note: Since all custom render passes inject first and we have stable sort,
             // we inject the builtin passes in the before events.
+            m_LoadColorPass = new LoadColorPass(RenderPassEvent.BeforeRenderingPrepasses, blitFlipMaterial);
             m_MainLightShadowCasterPass = new MainLightShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
             m_AdditionalLightsShadowCasterPass = new AdditionalLightsShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
             m_DepthPrepass = new DepthOnlyPass(RenderPassEvent.BeforeRenderingPrepasses, RenderQueueRange.opaque, data.opaqueLayerMask);
@@ -90,6 +94,7 @@ namespace UnityEngine.Rendering.Universal
             m_CameraDepthAttachment.Init("_CameraDepthAttachment");
             m_DepthTexture.Init("_CameraDepthTexture");
             m_ColorCopyTexture.Init("_CameraColorCopy");
+            m_LoadColorIntermediate.Init("_LoadColorIntermediate");
             m_AfterPostProcessColor.Init("_AfterPostProcessTexture");
             m_ColorGradingLut.Init("_InternalGradingLut");
             m_ForwardLights = new ForwardLights();
@@ -151,13 +156,13 @@ namespace UnityEngine.Rendering.Universal
 
             lastCameraData.requireIntermediateRenderTexture = intermediateRenderTexture;
             renderingData.blendIntermediate = false;
+            renderingData.copyToIntermediate = false;
 
             if (intermediateRenderTexture) {
                 CreateCameraRenderTarget(context, ref cameraData);
                 // if isFirstCamera, do nothing
                 // else if renderScaleChanged || no previous RT, clear RT & use blend blit (later in final blit)
-                // [as it's hard/buggy to copy from screen to a scaled RT, don't copy]
-                // [x]else if render target RT object changed, copy
+                // else if render target RT object changed, copy
                 // [can't gaurantee previous RT wasn't changed, don't reuse]
                 // [x]else, reuse previous RT, do nothing
                 //
@@ -170,7 +175,18 @@ namespace UnityEngine.Rendering.Universal
                 //
                 //note2: for objects that don't write alpha (e.g. some Particle Systems with legacy shaders), this won't work
                 //note3: a blending mode of 'normal' blending (SrcAlpha OneMinusSrcAlpha) is assumed in the process, other blending mode won't work
-                renderingData.blendIntermediate = !isFirstCamera && !Mathf.Approximately(cameraData.renderScale, 1f);
+                renderingData.blendIntermediate = renderScaleChanged && !lastCameraData.requireIntermediateRenderTexture;
+                renderingData.copyToIntermediate = !isFirstCamera && !renderingData.blendIntermediate && !renderScaleChanged;
+                if (renderingData.copyToIntermediate) { //copy to intermediate
+                    var directCopy = 
+#if false && UNITY_EDITOR && UNITY_STANDALONE
+                    true;
+#else
+                    cameraTargetDescriptor.msaaSamples <= 1 && !cameraData.isHdrEnabled;
+#endif
+                    m_LoadColorPass.Setup(cameraData.cameraTargetDescriptor, directCopy, m_LoadColorIntermediate, m_ActiveCameraColorAttachment);
+                    EnqueuePass(m_LoadColorPass);
+                }
             }
 
             ConfigureCameraTarget(m_ActiveCameraColorAttachment.Identifier(), m_ActiveCameraDepthAttachment.Identifier());

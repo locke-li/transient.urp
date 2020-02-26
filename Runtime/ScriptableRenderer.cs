@@ -352,6 +352,8 @@ namespace UnityEngine.Rendering.Universal
 
         void ExecuteRenderPass(ScriptableRenderContext context, ScriptableRenderPass renderPass, ref RenderingData renderingData)
         {
+            if (renderPass.SkipSetRenderTarget) goto execute;
+
             CommandBuffer cmd = CommandBufferPool.Get(k_SetRenderTarget);
             renderPass.Configure(cmd, renderingData.cameraData.cameraTargetDescriptor);
 
@@ -381,6 +383,8 @@ namespace UnityEngine.Rendering.Universal
 
                 if (renderingData.blendIntermediate)
                     clearFlag = ClearFlag.All;
+                else if(clearFlag == ClearFlag.Depth && renderingData.copyToIntermediate)
+                    clearFlag = ClearFlag.None;
 
                 SetRenderTarget(cmd, m_CameraColorTarget, m_CameraDepthTarget, clearFlag,
                     CoreUtils.ConvertSRGBToActiveColorSpace(camera.backgroundColor));
@@ -394,7 +398,6 @@ namespace UnityEngine.Rendering.Universal
                     XRUtils.DrawOcclusionMesh(cmd, cameraData.camera);
                 }
             }
-
             // Only setup render target if current render pass attachments are different from the active ones
             else if (passColorAttachment != m_ActiveColorAttachment || passDepthAttachment != m_ActiveDepthAttachment)
                 SetRenderTarget(cmd, passColorAttachment, passDepthAttachment, renderPass.clearFlag, renderPass.clearColor);
@@ -402,6 +405,7 @@ namespace UnityEngine.Rendering.Universal
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
 
+            execute:
             renderPass.Execute(context, ref renderingData);
         }
 

@@ -34,6 +34,7 @@ namespace UnityEngine.Rendering.Universal
     [MovedFrom("UnityEngine.Rendering.LWRP")] public abstract class ScriptableRenderPass
     {
         public RenderPassEvent renderPassEvent { get; set; }
+        public bool SkipSetRenderTarget { get; set; }
 
         public RenderTargetIdentifier colorAttachment
         {

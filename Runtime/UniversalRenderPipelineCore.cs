@@ -25,6 +25,7 @@ namespace UnityEngine.Rendering.Universal
         public bool supportsDynamicBatching;
         public PerObjectData perObjectData;
         public bool blendIntermediate;
+        public bool copyToIntermediate;
         public bool killAlphaInFinalBlit;
     }
 
