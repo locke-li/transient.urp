@@ -119,10 +119,6 @@ namespace UnityEngine.Rendering.Universal {
             ref CameraData cameraData = ref renderingData.cameraData;
             RenderTextureDescriptor cameraTargetDescriptor = renderingData.cameraData.cameraTargetDescriptor;
 
-            bool isFirstCamera = lastCameraData.renderScale == float.MinValue;
-            bool renderScaleChanged = !isFirstCamera && cameraData.renderScale != lastCameraData.renderScale;
-            lastCameraData.renderScale = cameraData.renderScale;
-
             // Special path for depth only offscreen cameras. Only write opaques + transparents.
             bool isOffscreenDepthTexture = cameraData.targetTexture != null && cameraData.targetTexture.format == RenderTextureFormat.Depth;
             if (isOffscreenDepthTexture) {
@@ -186,22 +182,21 @@ namespace UnityEngine.Rendering.Universal {
             bool createDepthTexture = cameraData.requiresDepthTexture && !requiresDepthPrepass;
             createDepthTexture |= (renderingData.cameraData.renderType == CameraRenderType.Base && !renderingData.resolveFinalTarget);
 
+            ref var stackingData = ref renderingData.stackingData;
+            ResetVarying(ref stackingData);
+
             // Configure all settings require to start a new camera stack (base camera only)
             if (cameraData.renderType == CameraRenderType.Base) {
                 m_ActiveCameraColorAttachment = (createColorTexture) ? m_CameraColorAttachment : RenderTargetHandle.CameraTarget;
                 m_ActiveCameraDepthAttachment = (createDepthTexture) ? m_CameraDepthAttachment : RenderTargetHandle.CameraTarget;
 
                 bool intermediateRenderTexture = createColorTexture || createDepthTexture;
-                renderingData.blendIntermediate = false;
-                renderingData.copyToIntermediate = false;
 
                 // Doesn't create texture for Overlay cameras as they are already overlaying on top of created textures.
                 bool createTextures = intermediateRenderTexture;
                 if (createTextures) {
                     CreateCameraRenderTarget(context, ref cameraData);
-                    SetupIntermediateMode(cameraData, ref lastCameraData,
-                        isFirstCamera, renderScaleChanged,
-                        ref renderingData.blendIntermediate, ref renderingData.copyToIntermediate);
+                    SetupIntermediateMode(cameraData, ref lastCameraData, ref stackingData);
                 }
 
                 lastCameraData.requireIntermediateRenderTexture = intermediateRenderTexture;
@@ -216,6 +211,10 @@ namespace UnityEngine.Rendering.Universal {
                 m_ActiveCameraColorAttachment = m_CameraColorAttachment;
                 m_ActiveCameraDepthAttachment = m_CameraDepthAttachment;
             }
+
+            lastCameraData.isStackingCamera = true;
+            lastCameraData.renderScale = cameraData.renderScale;
+            lastCameraData.renderTargetDescriptor = cameraData.cameraTargetDescriptor;
 
             ConfigureCameraTarget(m_ActiveCameraColorAttachment.Identifier(), m_ActiveCameraDepthAttachment.Identifier());
 
@@ -331,7 +330,7 @@ namespace UnityEngine.Rendering.Universal {
                             EnqueuePass(m_CapturePass);
                         }
 
-                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, renderingData.blendIntermediate);
+                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, stackingData.mode);
                         EnqueuePass(m_FinalBlitPass);
                     }
                 }
@@ -344,7 +343,7 @@ namespace UnityEngine.Rendering.Universal {
                     }
                     else if (m_ActiveCameraColorAttachment != RenderTargetHandle.CameraTarget)
                     {
-                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, renderingData.blendIntermediate);
+                        m_FinalBlitPass.Setup(cameraTargetDescriptor, m_ActiveCameraColorAttachment, stackingData.mode);
                         EnqueuePass(m_FinalBlitPass);
                     }
                 }
@@ -391,8 +390,8 @@ namespace UnityEngine.Rendering.Universal {
                         m_ActiveCameraColorAttachment == RenderTargetHandle.CameraTarget;
 
                     // We need final blit to resolve to screen
-                    if (!cameraTargetResolved) {
-                        m_FinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass, renderingData.blendIntermediate);
+                    if (!cameraTargetResolved && stackingData.mode != CameraStackingMode.Overlay) {
+                        m_FinalBlitPass.Setup(cameraTargetDescriptor, sourceForFinalPass, stackingData.mode);
                         EnqueuePass(m_FinalBlitPass);
                     }
                 }
@@ -528,14 +527,26 @@ namespace UnityEngine.Rendering.Universal {
                    !isCompatibleBackbufferTextureDimension || !cameraData.isDefaultViewport || isCapturing || Display.main.requiresBlitToBackbuffer;
         }
 
-        void SetupIntermediateMode(CameraData cameraData, ref CameraSetupData lastCameraData,
-            bool isFirstCamera, bool renderScaleChanged,
-            ref bool blendIntermediate, ref bool copyToIntermediate) {
-            // if isFirstCamera, do nothing
-            // else if renderScaleChanged, clear RT & use blend blit (later in final blit)
-            // else if render target RT object changed, copy
-            // [can't gaurantee previous RT wasn't changed, don't reuse]
-            // [x]else, reuse previous RT, do nothing
+        void ResetVarying(ref CameraStackingData stackingData) {
+            stackingData.mode = CameraStackingMode.None;
+        }
+
+        bool ShouldReuse(RenderTextureDescriptor first, RenderTextureDescriptor second) {
+            //TODO
+            return first.dimension == second.dimension
+                && first.width == second.width
+                && first.height == second.height
+                && first.graphicsFormat == second.graphicsFormat
+                && first.msaaSamples == second.msaaSamples;
+        }
+
+        void SetupIntermediateMode(CameraData cameraData, ref CameraSetupData lastCameraData, ref CameraStackingData stackingData) {
+            if (!lastCameraData.isStackingCamera)
+                return;
+            // if isFirstCamera = !isStackingCamera, do nothing
+            // else if render scale changed, clear RT & use blend blit (later in final blit)
+            // else if render target RT descriptor compatible, reuse
+            // else, copy previous RT
             //
             //note1: when blending is used, there is a ~2.5% error on color value in semi-transparent region
             //due to 1. gamma value blending  2. the render to the RT is actually premultipling alpha
@@ -546,9 +557,16 @@ namespace UnityEngine.Rendering.Universal {
             //
             //note2: for objects that don't write alpha (e.g. some Particle Systems with legacy shaders), this won't work
             //note3: a blending mode of 'normal' blending (SrcAlpha OneMinusSrcAlpha) is assumed in the process, other blending mode won't work
-            blendIntermediate = renderScaleChanged;
-            copyToIntermediate = !isFirstCamera && !blendIntermediate;
-            if (copyToIntermediate) { //copy to intermediate
+            if (cameraData.renderScale != lastCameraData.renderScale) {
+                stackingData.mode = CameraStackingMode.Blend;
+            }
+            else if (ShouldReuse(cameraData.cameraTargetDescriptor, lastCameraData.renderTargetDescriptor)) {
+                //TODO previous camera's final blit can be skipped,
+                // but incompatible with PostProcessing (need final blit)
+                stackingData.mode = CameraStackingMode.Overlay;
+            }
+            else {
+                stackingData.mode = CameraStackingMode.Copy;
                 var directCopy =
 #if false && UNITY_EDITOR && UNITY_STANDALONE
                         true;

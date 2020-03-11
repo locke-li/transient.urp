@@ -24,10 +24,9 @@ namespace UnityEngine.Rendering.Universal
         public PostProcessingData postProcessingData;
         public bool supportsDynamicBatching;
         public PerObjectData perObjectData;
+        public CameraStackingData stackingData;
         [Obsolete("killAlphaInFinalBlit is deprecated in the Universal Render Pipeline since it is no longer needed on any supported platform.")]
         public bool killAlphaInFinalBlit;
-        public bool blendIntermediate;
-        public bool copyToIntermediate;
 
         /// <summary>
         /// True if post-processing effect is enabled while rendering the camera stack.
@@ -37,6 +36,7 @@ namespace UnityEngine.Rendering.Universal
     }
 
     public struct CameraSetupData {
+        public bool isStackingCamera;
         public RenderTextureDescriptor renderTargetDescriptor;
         public bool requireIntermediateRenderTexture;
         public float renderScale;
@@ -121,6 +121,17 @@ namespace UnityEngine.Rendering.Universal
     {
         public ColorGradingMode gradingMode;
         public int lutSize;
+    }
+
+    public enum CameraStackingMode { 
+        None,
+        Overlay,
+        Blend,
+        Copy,
+    }
+
+    public struct CameraStackingData {
+        public CameraStackingMode mode;
     }
 
     class CameraDataComparer : IComparer<Camera>

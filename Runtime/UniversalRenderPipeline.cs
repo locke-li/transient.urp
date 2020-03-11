@@ -214,9 +214,7 @@ namespace UnityEngine.Rendering.Universal
 #endif
 
             SortCameras(cameras);
-            var lastCameraData = new CameraSetupData() {
-                renderScale = float.MinValue//value fixed for first camera condition check
-            };
+            var lastCameraData = new CameraSetupData();
             for (int i = 0; i < cameras.Length; ++i)
             {
                 var camera = cameras[i];
@@ -774,9 +772,7 @@ namespace UnityEngine.Rendering.Universal
 #pragma warning disable // avoid warning because killAlphaInFinalBlit has attribute Obsolete
             renderingData.killAlphaInFinalBlit = false;
 #pragma warning restore
-            //varying between cameras
-            renderingData.blendIntermediate = false;
-            renderingData.copyToIntermediate = false;
+            renderingData.stackingData.mode = CameraStackingMode.None;
         }
 
                 static void InitializeShadowData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, bool mainLightCastShadows, bool additionalLightsCastShadows, out ShadowData shadowData)

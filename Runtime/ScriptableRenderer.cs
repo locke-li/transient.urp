@@ -471,9 +471,10 @@ namespace UnityEngine.Rendering.Universal
 
             ClearFlag cameraClearFlag = GetCameraClearFlag(ref cameraData);
 
-            if (renderingData.blendIntermediate)
+            //TODO switch expression?
+            if (renderingData.stackingData.mode == CameraStackingMode.Blend)
                 cameraClearFlag = ClearFlag.All;
-            else if (cameraClearFlag == ClearFlag.Depth && renderingData.copyToIntermediate)
+            else if (cameraClearFlag == ClearFlag.Depth && renderingData.stackingData.mode == CameraStackingMode.Copy)
                 cameraClearFlag = ClearFlag.None;
 
             // We use a different code path for MRT since it calls a different version of API SetRenderTarget

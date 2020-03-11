@@ -154,7 +154,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
 
             if (requireFinalBlitPass)
             {
-                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle, false);
+                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle, CameraStackingMode.None);
                 EnqueuePass(m_FinalBlitPass);
             }
         }
