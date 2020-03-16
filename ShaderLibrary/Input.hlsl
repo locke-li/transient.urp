@@ -33,6 +33,9 @@ struct InputData
     half    fogCoord;
     half3   vertexLighting;
     half3   bakedGI;
+#if defined(LIGHTMAP_ON) && defined(_MIXED_LIGHTING_SHADOWMASK)
+	half4 shadowMask;
+#endif
 };
 
 ///////////////////////////////////////////////////////////////////////////////

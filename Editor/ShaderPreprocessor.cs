@@ -30,6 +30,7 @@ namespace UnityEditor.Rendering.Universal
         ShaderKeyword m_CascadeShadows = new ShaderKeyword(ShaderKeywordStrings.MainLightShadowCascades);
         ShaderKeyword m_SoftShadows = new ShaderKeyword(ShaderKeywordStrings.SoftShadows);
         ShaderKeyword m_MixedLightingSubtractive = new ShaderKeyword(ShaderKeywordStrings.MixedLightingSubtractive);
+        ShaderKeyword m_MixedLightingShadowMask = new ShaderKeyword(ShaderKeywordStrings.MixedLightingShadowMask);
         ShaderKeyword m_Lightmap = new ShaderKeyword("LIGHTMAP_ON");
         ShaderKeyword m_DirectionalLightmap = new ShaderKeyword("DIRLIGHTMAP_COMBINED");
         ShaderKeyword m_AlphaTestOn = new ShaderKeyword("_ALPHATEST_ON");
@@ -102,6 +103,11 @@ namespace UnityEditor.Rendering.Universal
                 return true;
 
             if (compilerData.shaderKeywordSet.IsEnabled(m_MixedLightingSubtractive) &&
+                !CoreUtils.HasFlag(features, ShaderFeatures.MixedLighting))
+                return true;
+
+            //TODO merge into the condition above?
+            if (compilerData.shaderKeywordSet.IsEnabled(m_MixedLightingShadowMask) &&
                 !CoreUtils.HasFlag(features, ShaderFeatures.MixedLighting))
                 return true;
 
