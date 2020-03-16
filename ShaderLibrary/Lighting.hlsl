@@ -525,7 +525,7 @@ void MixRealtimeAndBakedGI(inout Light light, half3 normalWS, inout half3 bakedG
 #endif
 
 #if defined(_MIXED_LIGHTING_SHADOWMASK) && defined(LIGHTMAP_ON)
-	light.shadowAttenuation = min(light.shadowAttenuation,  shadowMask.r);
+	light.shadowAttenuation = min(shadowMask[_MainLightOcclusionProbe.x], light.shadowAttenuation);
 #endif
 }
 
