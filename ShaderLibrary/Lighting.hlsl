@@ -518,14 +518,19 @@ half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, half3
     return EnvironmentBRDF(brdfData, indirectDiffuse, indirectSpecular, fresnelTerm);
 }
 
-void MixRealtimeAndBakedGI(inout Light light, half3 normalWS, inout half3 bakedGI, half4 shadowMask)
+void MixRealtimeAndBakedGI(inout Light light, half3 normalWS, inout half3 bakedGI, half4 shadowMask, float4 shadowCoord)
 {
 #if defined(_MIXED_LIGHTING_SUBTRACTIVE) && defined(LIGHTMAP_ON)
     bakedGI = SubtractDirectMainLightFromLightmap(light, normalWS, bakedGI);
 #endif
 
 #if defined(_MIXED_LIGHTING_SHADOWMASK) && defined(LIGHTMAP_ON)
-	light.shadowAttenuation = min(shadowMask[_MainLightOcclusionProbe.x], light.shadowAttenuation);
+	// if not distance shadowmask mode || outside shadow distance, mix with shadow mask
+	// for directional light, shadowmap is orthographic, no need to divide by shadowCoord.w
+	//TODO only works in Game view
+	if (_MainLightOcclusionProbe.w == 0 || BEYOND_SHADOW_FAR(shadowCoord)) {
+		light.shadowAttenuation = min(shadowMask[_MainLightOcclusionProbe.x], light.shadowAttenuation);
+	}
 #endif
 }
 
@@ -588,7 +593,7 @@ half4 UniversalFragmentPBR(InputData inputData, half3 albedo, half metallic, hal
     
     Light mainLight = GetMainLight(inputData.shadowCoord);
 	half4 shadowMask = GET_SHADOWMASK(inputData);
-    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, shadowMask);
+    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, shadowMask, inputData.shadowCoord);
 
     half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
     color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
@@ -614,7 +619,7 @@ half4 UniversalFragmentBlinnPhong(InputData inputData, half3 diffuse, half4 spec
 {
     Light mainLight = GetMainLight(inputData.shadowCoord);
 	half4 shadowMask = GET_SHADOWMASK(inputData);
-    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, shadowMask);
+    MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, shadowMask, inputData.shadowCoord);
 
     half3 attenuatedLightColor = mainLight.color * (mainLight.distanceAttenuation * mainLight.shadowAttenuation);
     half3 diffuseColor = inputData.bakedGI + LightingLambert(attenuatedLightColor, mainLight.direction, inputData.normalWS);
