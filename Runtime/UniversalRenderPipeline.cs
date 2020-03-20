@@ -751,7 +751,8 @@ namespace UnityEngine.Rendering.Universal
                         Light light = visibleLights[i].light;
 
                         // UniversalRP doesn't support additional directional lights or point light shadows yet
-                        if (visibleLights[i].lightType == LightType.Spot && light != null && light.shadows != LightShadows.None)
+                        var supported = light.type == LightType.Spot || light.type == LightType.Directional;
+                        if (supported && light != null && light.shadows != LightShadows.None)
                         {
                             additionalLightsCastShadows = true;
                             break;

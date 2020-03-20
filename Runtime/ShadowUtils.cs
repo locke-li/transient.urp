@@ -59,6 +59,15 @@ namespace UnityEngine.Rendering.Universal
             return success;
         }
 
+        public static bool ExtractDirectionalLightMatrix(ref CullingResults cullResults, ref ShadowData shadowData, int shadowLightIndex, int shadowResolution, float shadowNearPlane, out Matrix4x4 shadowMatrix, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix) {
+            ShadowSplitData splitData;
+            bool success = cullResults.ComputeDirectionalShadowMatricesAndCullingPrimitives(shadowLightIndex,
+                0, shadowData.mainLightShadowCascadesCount, shadowData.mainLightShadowCascadesSplit, shadowResolution, shadowNearPlane, out viewMatrix, out projMatrix,
+                out splitData);
+            shadowMatrix = GetShadowTransform(projMatrix, viewMatrix);
+            return success;
+        }
+
         public static bool ExtractSpotLightMatrix(ref CullingResults cullResults, ref ShadowData shadowData, int shadowLightIndex, out Matrix4x4 shadowMatrix, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix)
         {
             ShadowSplitData splitData;

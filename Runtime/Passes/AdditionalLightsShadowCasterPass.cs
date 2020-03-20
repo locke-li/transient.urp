@@ -112,13 +112,32 @@ namespace UnityEngine.Rendering.Universal.Internal
 
                     if (IsValidShadowCastingLight(ref renderingData.lightData, i))
                     {
-                        bool success = ShadowUtils.ExtractSpotLightMatrix(ref renderingData.cullResults,
-                            ref renderingData.shadowData,
-                            i,
-                            out var shadowTransform,
-                            out m_AdditionalLightSlices[shadowCastingLightIndex].viewMatrix,
-                            out m_AdditionalLightSlices[shadowCastingLightIndex].projectionMatrix);
-
+                        bool success = false;
+                        Matrix4x4 shadowTransform = new Matrix4x4();
+                        switch (shadowLight.lightType) {
+                            case LightType.Directional: {
+                                    var resolution = ShadowUtils.GetMaxTileResolutionInAtlas(m_ShadowmapWidth, m_ShadowmapHeight, 1);
+                                    success = ShadowUtils.ExtractDirectionalLightMatrix(ref renderingData.cullResults,
+                                        ref renderingData.shadowData,
+                                        i,
+                                        resolution,
+                                        shadowLight.light.shadowNearPlane,
+                                        out shadowTransform,
+                                        out m_AdditionalLightSlices[shadowCastingLightIndex].viewMatrix,
+                                        out m_AdditionalLightSlices[shadowCastingLightIndex].projectionMatrix);
+                                }
+                                break;
+                            case LightType.Spot: {
+                                    success = ShadowUtils.ExtractSpotLightMatrix(ref renderingData.cullResults,
+                                        ref renderingData.shadowData,
+                                        i,
+                                        out shadowTransform,
+                                        out m_AdditionalLightSlices[shadowCastingLightIndex].viewMatrix,
+                                        out m_AdditionalLightSlices[shadowCastingLightIndex].projectionMatrix);
+                                }
+                                break;
+                        }
+                        
                         if (success)
                         {
                             m_AdditionalShadowCastingLightIndices.Add(i);
@@ -380,7 +399,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             VisibleLight shadowLight = lightData.visibleLights[i];
 
             // Directional and Point light shadows are not supported in the shadow map atlas
-            if (shadowLight.lightType == LightType.Point || shadowLight.lightType == LightType.Directional)
+            if (shadowLight.lightType == LightType.Point)
                 return false;
 
             Light light = shadowLight.light;
