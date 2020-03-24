@@ -175,7 +175,7 @@ Light GetAdditionalPerObjectLight(int perObjectLightIndex, float3 positionWS, ha
 #endif
 
 #if defined(LIGHTMAP_ON) && defined(_MIXED_LIGHTING_SHADOWMASK)
-	light.shadowAttenuation = min(light.shadowAttenuation, shadowMask[probeChannel]);
+	light.shadowAttenuation = min(light.shadowAttenuation, max(shadowMask[probeChannel], lightProbeContribution));
 #endif
 
     return light;
@@ -528,8 +528,8 @@ void MixRealtimeAndBakedGI(inout Light light, half3 normalWS, inout half3 bakedG
 	// if not distance shadowmask mode || outside shadow distance, mix with shadow mask
 	// for directional light, shadowmap is orthographic, no need to divide by shadowCoord.w
 	//TODO only works in Game view
-	if (_MainLightOcclusionProbe.w == 0 || BEYOND_SHADOW_FAR(shadowCoord)) {
-		light.shadowAttenuation = min(shadowMask[_MainLightOcclusionProbe.x], light.shadowAttenuation);
+	if (BEYOND_SHADOW_FAR(shadowCoord)) {
+		light.shadowAttenuation = min(max(_MainLightOcclusionProbe.w, shadowMask[_MainLightOcclusionProbe.x]), light.shadowAttenuation);
 	}
 #endif
 }
