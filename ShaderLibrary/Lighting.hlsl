@@ -534,6 +534,9 @@ void MixShadowMask(inout Light light, half2 occlusionProbe, half4 shadowMask, fl
     {//shadowmask mode, mix
         light.shadowAttenuation = min(contribution, light.shadowAttenuation);
     }
+	//TODO this check causes gaps on the boundary,
+	//as shadowmap is truncated by sampling method,
+	//which seems to be different from checking (x <= 0 || x >= 1 || y <= 0 || y >= 1)
     else if (BEYOND_SHADOW_RANGE(shadowCoord))
     {//distance shadowmask mode, no need to mix
         light.shadowAttenuation = contribution;
@@ -604,6 +607,8 @@ half4 UniversalFragmentPBR(InputData inputData, half3 albedo, half metallic, hal
 
     half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
     color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
+
+	//if (BEYOND_SHADOW_RANGE(inputData.shadowCoord)) color -= 0.2;
 
 #ifdef _ADDITIONAL_LIGHTS
     uint pixelLightCount = GetAdditionalLightsCount();
