@@ -537,6 +537,8 @@ void MixShadowMask(inout Light light, half2 occlusionProbe, half4 shadowMask, fl
 	//TODO this check causes gaps on the boundary,
 	//as shadowmap is truncated by sampling method,
 	//which seems to be different from checking (x <= 0 || x >= 1 || y <= 0 || y >= 1)
+    //on Unity 2019.3.4, with rectangular camera distance matrix, the gap shows
+    //on Unity 2019.3.6, the camera distance matrix limits the euclidean distance, results in a circular area, thus unaffected
     else if (BEYOND_SHADOW_RANGE(shadowCoord))
     {//distance shadowmask mode, no need to mix
         light.shadowAttenuation = contribution;
