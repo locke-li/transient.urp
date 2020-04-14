@@ -149,7 +149,7 @@ namespace UnityEngine.Rendering.Universal {
 
                 for (int i = 0; i < rendererFeatures.Count; ++i)
                 {
-                    if(rendererFeatures[i].isActive)
+                    if (rendererFeatures[i].isActive)
                         rendererFeatures[i].AddRenderPasses(this, ref renderingData);
                 }
 
@@ -195,14 +195,7 @@ namespace UnityEngine.Rendering.Universal {
                 if (setup.intermediateRenderTexture) {
                     CreateCameraRenderTarget(context, ref cameraData);
                     if (setup.stackingOption == StackingOption.Copy) {
-                        var directCopy =
-#if false && UNITY_EDITOR && UNITY_STANDALONE
-                        true;
-#else
-                        cameraData.cameraTargetDescriptor.msaaSamples <= 1 && !cameraData.isHdrEnabled;
-#endif
-                        m_LoadColorPass.Setup(cameraData.cameraTargetDescriptor, directCopy, m_LoadColorIntermediate, m_ActiveCameraColorAttachment);
-                        EnqueuePass(m_LoadColorPass);
+                        CopyToRenderTarget(ref cameraData);
                     }
                 }
 
@@ -221,7 +214,7 @@ namespace UnityEngine.Rendering.Universal {
 
             for (int i = 0; i < rendererFeatures.Count; ++i)
             {
-                if(rendererFeatures[i].isActive)
+                if (rendererFeatures[i].isActive)
                     rendererFeatures[i].AddRenderPasses(this, ref renderingData);
             }
 
@@ -525,6 +518,17 @@ namespace UnityEngine.Rendering.Universal {
             setup.createDepthTexture = cameraData.requiresDepthTexture && !setup.requiresDepthPrepass;
 
             setup.intermediateRenderTexture = setup.createDepthTexture || setup.createColorTexture;
+        }
+
+        void CopyToRenderTarget(ref CameraData cameraData) {
+            var directCopy =
+#if false && UNITY_EDITOR && UNITY_STANDALONE
+                        true;
+#else
+                        cameraData.cameraTargetDescriptor.msaaSamples <= 1 && !cameraData.isHdrEnabled;
+#endif
+            m_LoadColorPass.Setup(cameraData.cameraTargetDescriptor, directCopy, m_LoadColorIntermediate, m_ActiveCameraColorAttachment);
+            EnqueuePass(m_LoadColorPass);
         }
 
         bool RequiresIntermediateColorTexture(ref CameraData cameraData, RenderTextureDescriptor baseDescriptor)
