@@ -19,12 +19,12 @@ namespace UnityEngine.Rendering.Universal
     {
         public CullingResults cullResults;
         public CameraData cameraData;
+        public CameraSetupData cameraSetup;
         public LightData lightData;
         public ShadowData shadowData;
         public PostProcessingData postProcessingData;
         public bool supportsDynamicBatching;
         public PerObjectData perObjectData;
-        public CameraStackingData stackingData;
         [Obsolete("killAlphaInFinalBlit is deprecated in the Universal Render Pipeline since it is no longer needed on any supported platform.")]
         public bool killAlphaInFinalBlit;
 
@@ -35,11 +35,21 @@ namespace UnityEngine.Rendering.Universal
         internal bool resolveFinalTarget;
     }
 
+    public enum StackingOption { 
+        None,
+        Blend,
+        Copy,
+        Reuse,
+        _OverlayOutsideStack,
+    }
+
     public struct CameraSetupData {
-        public bool isStackingCamera;
-        public RenderTextureDescriptor renderTargetDescriptor;
-        public bool requireIntermediateRenderTexture;
-        public float renderScale;
+        public bool requiresDepthPrepass;
+        public bool createDepthTexture;
+        public bool createColorTexture;
+        public bool intermediateRenderTexture;
+        public bool skipFinalBlit;
+        public StackingOption stackingOption;
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct LightData
@@ -121,17 +131,6 @@ namespace UnityEngine.Rendering.Universal
     {
         public ColorGradingMode gradingMode;
         public int lutSize;
-    }
-
-    public enum CameraStackingMode { 
-        None,
-        Overlay,
-        Blend,
-        Copy,
-    }
-
-    public struct CameraStackingData {
-        public CameraStackingMode mode;
     }
 
     class CameraDataComparer : IComparer<Camera>

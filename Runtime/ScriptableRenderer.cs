@@ -196,7 +196,9 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="renderingData">Current render state information.</param>
         /// <seealso cref="ScriptableRenderPass"/>
         /// <seealso cref="ScriptableRendererFeature"/>
-        public abstract void Setup(ScriptableRenderContext context, ref RenderingData renderingData, ref CameraSetupData lastCameraData);
+        public abstract void Setup(ScriptableRenderContext context, ref RenderingData renderingData);
+
+        public abstract void InitializeCameraSetup(ref CameraData cameraData, ref CameraSetupData setup);
 
         /// <summary>
         /// Override this method to implement the lighting setup for the renderer. You can use this to
@@ -473,6 +475,7 @@ namespace UnityEngine.Rendering.Universal
             if (renderPass.SkipSetRenderTarget) goto execute;
 
             ref CameraData cameraData = ref renderingData.cameraData;
+            ref CameraSetupData cameraSetup = ref renderingData.cameraSetup;
             Camera camera = cameraData.camera;
             bool firstTimeStereo = false;
 
@@ -483,9 +486,9 @@ namespace UnityEngine.Rendering.Universal
             ClearFlag cameraClearFlag = GetCameraClearFlag(ref cameraData);
 
             //TODO switch expression?
-            if (renderingData.stackingData.mode == CameraStackingMode.Blend)
+            if (cameraSetup.stackingOption == StackingOption.Blend)
                 cameraClearFlag = ClearFlag.All;
-            else if (cameraClearFlag == ClearFlag.Depth && renderingData.stackingData.mode == CameraStackingMode.Copy)
+            else if (cameraClearFlag == ClearFlag.Depth && cameraSetup.stackingOption == StackingOption.Copy)
                 cameraClearFlag = ClearFlag.None;
 
             // We use a different code path for MRT since it calls a different version of API SetRenderTarget

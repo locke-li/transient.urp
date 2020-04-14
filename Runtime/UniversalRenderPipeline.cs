@@ -211,13 +211,13 @@ namespace UnityEngine.Rendering.Universal
 #endif
 
             SortCameras(cameras);
-            var lastCameraData = new CameraSetupData();
+            var (cameraData, cameraSetup) = SetupCamera(cameras);
             for (int i = 0; i < cameras.Length; ++i)
             {
                 var camera = cameras[i];
                 if (IsGameCamera(camera))
                 {
-                    RenderCameraStack(renderContext, camera, ref lastCameraData);
+                    RenderCameraStack(renderContext, camera, ref cameraData[i], ref cameraSetup[i]);
                 }
                 else
                 {
@@ -228,12 +228,82 @@ namespace UnityEngine.Rendering.Universal
 #endif
                     UpdateVolumeFramework(camera, null);
                     
-                    RenderSingleCamera(renderContext, camera, ref lastCameraData);
+                    RenderSingleCamera(renderContext, ref cameraData[i], ref cameraSetup[i]);
                     EndCameraRendering(renderContext, camera);
                 }
             }
 
             EndFrameRendering(renderContext, cameras);
+        }
+
+        (CameraData[] , CameraSetupData[]) SetupCamera(Camera[] cameras) {
+            var cameraSetup = new CameraSetupData[cameras.Length];
+            var cameraData = new CameraData[cameras.Length];
+            ref var lastSetup = ref cameraSetup[0];
+            ref var lastCameraData = ref cameraData[0];
+            //determine buffer operation depending on camera config/relation
+            for (int i = 0; i < cameras.Length; ++i) {
+                var camera = cameras[i];
+
+                UniversalAdditionalCameraData additionalCameraData = null;
+                if (IsGameCamera(camera))
+                    camera.gameObject.TryGetComponent(out additionalCameraData);
+
+                //skip overlay camera outside of any stack
+                if (additionalCameraData != null && additionalCameraData.renderType != CameraRenderType.Base) {
+                    cameraSetup[i].stackingOption = StackingOption._OverlayOutsideStack;
+                    Debug.LogWarning("Only Base cameras can be rendered with standalone RenderSingleCamera. Camera will be skipped.");
+                    continue;
+                }
+
+                InitializeCameraData(camera, additionalCameraData, out cameraData[i]);
+                InitializeCameraSetup(i, ref lastCameraData, ref cameraData[i], ref lastSetup, out cameraSetup[i]);
+                lastCameraData = ref cameraData[i];
+                lastSetup = ref cameraSetup[i];
+            }
+
+            return (cameraData, cameraSetup);
+        }
+
+        void InitializeCameraSetup(int i, ref CameraData lastCameraData, ref CameraData cameraData, ref CameraSetupData lastSetup, out CameraSetupData setup) {
+            setup = new CameraSetupData();
+            cameraData.renderer.InitializeCameraSetup(ref cameraData, ref setup);
+            if (i == 0 || !setup.intermediateRenderTexture)
+                return;
+            // if isFirstCamera = !isStackingCamera, do nothing
+            // else if render scale changed, clear RT & use blend blit (later in final blit)
+            // else if render target RT descriptor compatible, reuse
+            // else, copy previous RT
+            //
+            //note1: when blending is used, there is a ~2.5% error on color value in semi-transparent region
+            //due to 1. gamma value blending  2. the render to the RT is actually premultipling alpha
+            //when set linear, the error is minor.
+            //this only affects scaled camera with semi-transparent objects
+            //since the main motivation for these is to have non-scaled UI camera (semi-transparent stuff) and scaled scene camera (mostly opaque stuff)
+            //work together, so it may still be useful
+            //
+            //note2: for objects that don't write alpha (e.g. some Particle Systems with legacy shaders), this won't work
+            //note3: a blending mode of 'normal' blending (SrcAlpha OneMinusSrcAlpha) is assumed in the process, other blending mode won't work
+            if (cameraData.renderScale != lastCameraData.renderScale) {
+                setup.stackingOption = StackingOption.Blend;
+            }
+            else if (lastSetup.intermediateRenderTexture && ShouldReuse(cameraData.cameraTargetDescriptor, lastCameraData.cameraTargetDescriptor)) {
+                //NOTE: incompatible with PostProcessing
+                setup.stackingOption = StackingOption.Reuse;
+                lastSetup.skipFinalBlit = true;
+            }
+            else {
+                setup.stackingOption = StackingOption.Copy;
+            }
+        }
+
+        bool ShouldReuse(RenderTextureDescriptor first, RenderTextureDescriptor second) {
+            //TODO
+            return first.dimension == second.dimension
+                && first.width == second.width
+                && first.height == second.height
+                && first.graphicsFormat == second.graphicsFormat
+                && first.msaaSamples == second.msaaSamples;
         }
 
         /// <summary>
@@ -244,19 +314,8 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="camera">Camera to render.</param>
         /// <param name="lastCameraData">info of the camera rendered prior to this.</param>
         /// <seealso cref="ScriptableRenderContext"/>
-        public static void RenderSingleCamera(ScriptableRenderContext context, Camera camera, ref CameraSetupData lastCameraData)
+        public static void RenderSingleCamera(ScriptableRenderContext context, ref CameraData cameraData, ref CameraSetupData lastCameraData)
         {
-            UniversalAdditionalCameraData additionalCameraData = null;
-            if (IsGameCamera(camera))
-                camera.gameObject.TryGetComponent(out additionalCameraData);
-
-            if (additionalCameraData != null && additionalCameraData.renderType != CameraRenderType.Base)
-            {
-                Debug.LogWarning("Only Base cameras can be rendered with standalone RenderSingleCamera. Camera will be skipped.");
-                return;
-            }
-
-            InitializeCameraData(camera, additionalCameraData, out var cameraData);
             RenderSingleCamera(context, cameraData, ref lastCameraData, true, cameraData.postProcessEnabled);
         }
 
@@ -267,7 +326,7 @@ namespace UnityEngine.Rendering.Universal
         /// <param name="cameraData">Camera rendering data. This might contain data inherited from a base camera.</param>
         /// <param name="requiresBlitToBackbuffer">True if this is the last camera in the stack rendering, false otherwise.</param>
         /// <param name="anyPostProcessingEnabled">True if at least one camera has post-processing enabled in the stack, false otherwise.</param>
-        static void RenderSingleCamera(ScriptableRenderContext context, CameraData cameraData, ref CameraSetupData lastCameraData, bool requiresBlitToBackbuffer, bool anyPostProcessingEnabled)
+        static void RenderSingleCamera(ScriptableRenderContext context, CameraData cameraData, ref CameraSetupData cameraSetup, bool requiresBlitToBackbuffer, bool anyPostProcessingEnabled)
         {
             Camera camera = cameraData.camera;
             var renderer = cameraData.renderer;
@@ -301,9 +360,9 @@ namespace UnityEngine.Rendering.Universal
 #endif
 
                 var cullResults = context.Cull(ref cullingParameters);
-                InitializeRenderingData(asset, ref cameraData, ref cullResults, requiresBlitToBackbuffer, anyPostProcessingEnabled, out var renderingData);
+                InitializeRenderingData(asset, ref cameraData, ref cameraSetup, ref cullResults, requiresBlitToBackbuffer, anyPostProcessingEnabled, out var renderingData);
 
-                renderer.Setup(context, ref renderingData, ref lastCameraData);
+                renderer.Setup(context, ref renderingData);
                 renderer.Execute(context, ref renderingData);
             }
 
@@ -318,13 +377,13 @@ namespace UnityEngine.Rendering.Universal
         /// </summary>
         /// <param name="context">Render context used to record commands during execution.</param>
         /// <param name="camera">Camera to render.</param>
-        static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, ref CameraSetupData lastCameraData)
+        static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, ref CameraData baseCameraData, ref CameraSetupData baseCameraSetup)
         {
-            baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);
-
             // Overlay cameras will be rendered stacked while rendering base cameras
-            if (baseCameraAdditionalData != null && baseCameraAdditionalData.renderType == CameraRenderType.Overlay)
+            if (baseCameraSetup.stackingOption == StackingOption._OverlayOutsideStack)
                 return;
+
+            baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);
 
             // renderer contains a stack if it has additional data and the renderer supports stacking
             var renderer = baseCameraAdditionalData?.scriptableRenderer;
@@ -386,7 +445,6 @@ namespace UnityEngine.Rendering.Universal
 #endif
             }
 
-
             bool isStackedRendering = lastActiveOverlayCameraIndex != -1;
 
             BeginCameraRendering(context, baseCamera);
@@ -395,8 +453,8 @@ namespace UnityEngine.Rendering.Universal
             VFX.VFXManager.PrepareCamera(baseCamera);
 #endif
             UpdateVolumeFramework(baseCamera, baseCameraAdditionalData);
-            InitializeCameraData(baseCamera, baseCameraAdditionalData, out var baseCameraData);
-            RenderSingleCamera(context, baseCameraData, ref lastCameraData, !isStackedRendering, anyPostProcessingEnabled);
+            //InitializeCameraData(baseCamera, baseCameraAdditionalData, out var baseCameraData);
+            RenderSingleCamera(context, baseCameraData, ref baseCameraSetup, !isStackedRendering, anyPostProcessingEnabled);
             EndCameraRendering(context, baseCamera);
 
             if (!isStackedRendering)
@@ -424,7 +482,7 @@ namespace UnityEngine.Rendering.Universal
 #endif
                     UpdateVolumeFramework(currCamera, currCameraData);
                     InitializeAdditionalCameraData(currCamera, currCameraData, ref overlayCameraData);
-                    RenderSingleCamera(context, overlayCameraData, ref lastCameraData, lastCamera, anyPostProcessingEnabled);
+                    RenderSingleCamera(context, overlayCameraData, ref baseCameraSetup, lastCamera, anyPostProcessingEnabled);
                     EndCameraRendering(context, currCamera);
                 }
             }
@@ -724,8 +782,8 @@ namespace UnityEngine.Rendering.Universal
             cameraData.requiresDepthTexture |= cameraData.isSceneViewCamera || depthRequiredForPostFX;
         }
 
-        static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CullingResults cullResults,
-            bool requiresBlitToBackbuffer, bool anyPostProcessingEnabled, out RenderingData renderingData)
+        static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CameraSetupData cameraSetup,
+            ref CullingResults cullResults, bool requiresBlitToBackbuffer, bool anyPostProcessingEnabled, out RenderingData renderingData)
         {
             var visibleLights = cullResults.visibleLights;
 
@@ -761,6 +819,7 @@ namespace UnityEngine.Rendering.Universal
 
             renderingData.cullResults = cullResults;
             renderingData.cameraData = cameraData;
+            renderingData.cameraSetup = cameraSetup;
             InitializeLightData(settings, visibleLights, mainLightIndex, out renderingData.lightData);
             InitializeShadowData(settings, visibleLights, mainLightCastShadows, additionalLightsCastShadows && !renderingData.lightData.shadeAdditionalLightsPerVertex, out renderingData.shadowData);
             InitializePostProcessingData(settings, out renderingData.postProcessingData);
@@ -773,7 +832,6 @@ namespace UnityEngine.Rendering.Universal
 #pragma warning disable // avoid warning because killAlphaInFinalBlit has attribute Obsolete
             renderingData.killAlphaInFinalBlit = false;
 #pragma warning restore
-            renderingData.stackingData.mode = CameraStackingMode.None;
         }
 
                 static void InitializeShadowData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, bool mainLightCastShadows, bool additionalLightsCastShadows, out ShadowData shadowData)

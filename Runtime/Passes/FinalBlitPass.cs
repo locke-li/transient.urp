@@ -28,11 +28,11 @@ namespace UnityEngine.Rendering.Universal.Internal
         /// </summary>
         /// <param name="baseDescriptor"></param>
         /// <param name="colorHandle"></param>
-        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, CameraStackingMode stackingMode)
+        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle, StackingOption stackingOption)
         {
             m_Source = colorHandle;
             m_TargetDimension = baseDescriptor.dimension;
-            m_EffectiveBlitMaterial = stackingMode == CameraStackingMode.Blend ? m_BlendBlitMaterial : m_BlitMaterial;
+            m_EffectiveBlitMaterial = stackingOption == StackingOption.Blend ? m_BlendBlitMaterial : m_BlitMaterial;
         }
 
         /// <inheritdoc/>

@@ -57,7 +57,7 @@ namespace UnityEngine.Experimental.Rendering.Universal
             return m_Renderer2DData;
         }
 
-        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData, ref CameraSetupData lastCameraData)
+        public override void Setup(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             ref CameraData cameraData = ref renderingData.cameraData;
             ref var cameraTargetDescriptor = ref cameraData.cameraTargetDescriptor;
@@ -162,11 +162,15 @@ namespace UnityEngine.Experimental.Rendering.Universal
 
             if (requireFinalBlitPass)
             {
-                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle, CameraStackingMode.None);
+                m_FinalBlitPass.Setup(cameraTargetDescriptor, finalBlitSourceHandle, StackingOption.None);
                 EnqueuePass(m_FinalBlitPass);
             }
         }
-        
+
+        public override void InitializeCameraSetup(ref CameraData cameraData, ref CameraSetupData setup) {
+            //TODO
+        }
+
         public override void SetupCullingParameters(ref ScriptableCullingParameters cullingParameters, ref CameraData cameraData)
         {
             cullingParameters.cullingOptions = CullingOptions.None;
