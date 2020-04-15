@@ -252,8 +252,7 @@ namespace UnityEngine.Rendering.Universal
 
                 //skip overlay camera outside of any stack
                 if (additionalCameraData != null && additionalCameraData.renderType != CameraRenderType.Base) {
-                    cameraSetup[i].stackingOption = StackingOption._OverlayOutsideStack;
-                    Debug.LogWarning("Only Base cameras can be rendered with standalone RenderSingleCamera. Camera will be skipped.");
+                    cameraSetup[i].stackingOption = StackingOption._OverlayInStack;
                     continue;
                 }
 
@@ -381,7 +380,7 @@ namespace UnityEngine.Rendering.Universal
         static void RenderCameraStack(ScriptableRenderContext context, Camera baseCamera, ref CameraData baseCameraData, ref CameraSetupData baseCameraSetup)
         {
             // Overlay cameras will be rendered stacked while rendering base cameras
-            if (baseCameraSetup.stackingOption == StackingOption._OverlayOutsideStack)
+            if (baseCameraSetup.stackingOption == StackingOption._OverlayInStack)
                 return;
 
             baseCamera.TryGetComponent<UniversalAdditionalCameraData>(out var baseCameraAdditionalData);

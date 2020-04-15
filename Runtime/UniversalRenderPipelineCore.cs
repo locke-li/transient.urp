@@ -40,7 +40,7 @@ namespace UnityEngine.Rendering.Universal
         Blend,
         Copy,
         Reuse,
-        _OverlayOutsideStack,
+        _OverlayInStack,
     }
 
     public struct CameraSetupData {
