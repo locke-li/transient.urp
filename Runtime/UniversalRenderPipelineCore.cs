@@ -60,6 +60,7 @@ namespace UnityEngine.Rendering.Universal
         public NativeArray<VisibleLight> visibleLights;
         public bool shadeAdditionalLightsPerVertex;
         public bool supportsMixedLighting;
+        public bool supportsAddtionalLightDistanceShadowMask;
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct CameraData

@@ -28,7 +28,7 @@ namespace UnityEditor.Rendering.Universal
             public static GUIContent rendererDefaultMissingText = EditorGUIUtility.TrIconContent("console.erroricon.sml", "Default renderer missing. Click this to select a new renderer.");
             public static GUIContent requireDepthTextureText = EditorGUIUtility.TrTextContent("Depth Texture", "If enabled the pipeline will generate camera's depth that can be bound in shaders as _CameraDepthTexture.");
             public static GUIContent requireOpaqueTextureText = EditorGUIUtility.TrTextContent("Opaque Texture", "If enabled the pipeline will copy the screen to texture after opaque objects are drawn. Can be bound in shaders as _CameraColorCopy.");
-            public static GUIContent requireTransparentTextureText = EditorGUIUtility.TrTextContent("Opaque Texture", "If enabled the pipeline will copy the screen to texture after transparent objects are drawn. Can be bound in shaders as _CameraColorCopy.");
+            public static GUIContent requireTransparentTextureText = EditorGUIUtility.TrTextContent("Transparent Texture", "If enabled the pipeline will copy the screen to texture after transparent objects are drawn. Can be bound in shaders as _CameraColorCopy.");
             public static GUIContent opaqueDownsamplingText = EditorGUIUtility.TrTextContent("Opaque Downsampling", "The downsampling method that is used for the opaque texture");
             public static GUIContent supportsTerrainHolesText = EditorGUIUtility.TrTextContent("Terrain Holes", "When disabled, Universal Rendering Pipeline removes all Terrain hole Shader variants when you build for the Unity Player. This decreases build time.");
 
@@ -45,7 +45,8 @@ namespace UnityEditor.Rendering.Universal
             // Additional lights
             public static GUIContent addditionalLightsRenderingModeText = EditorGUIUtility.TrTextContent("Additional Lights", "Additional lights support.");
             public static GUIContent perObjectLimit = EditorGUIUtility.TrTextContent("Per Object Limit", "Maximum amount of additional lights. These lights are sorted and culled per-object.");
-            public static GUIContent supportsAdditionalShadowsText = EditorGUIUtility.TrTextContent("Cast Shadows", "If enabled shadows will be supported for spot lights.\n");
+            public static GUIContent supportsAdditionalShadowsText = EditorGUIUtility.TrTextContent("Cast Shadows", "If enabled shadows will be supported for additional lights.\n");
+            public static GUIContent supportsAdditionalDistanceShadowMaskText = EditorGUIUtility.TrTextContent("Distance ShadowMask", "If enabled distance shadow mask will be used for additional lights.\n");
             public static GUIContent additionalLightsShadowmapResolution = EditorGUIUtility.TrTextContent("Shadow Resolution", "All additional lights are packed into a single shadowmap atlas. This setting controls the atlas size.");
 
             // Shadow settings
@@ -115,6 +116,7 @@ namespace UnityEditor.Rendering.Universal
 
         SerializedProperty m_AdditionalLightsRenderingModeProp;
         SerializedProperty m_AdditionalLightsPerObjectLimitProp;
+        SerializedProperty m_AdditionalLightDistanceShadowMaskSupportedProp;
         SerializedProperty m_AdditionalLightShadowsSupportedProp;
         SerializedProperty m_AdditionalLightShadowmapResolutionProp;
 
@@ -184,6 +186,7 @@ namespace UnityEditor.Rendering.Universal
 
             m_AdditionalLightsRenderingModeProp = serializedObject.FindProperty("m_AdditionalLightsRenderingMode");
             m_AdditionalLightsPerObjectLimitProp = serializedObject.FindProperty("m_AdditionalLightsPerObjectLimit");
+            m_AdditionalLightDistanceShadowMaskSupportedProp = serializedObject.FindProperty("m_AdditionalLightDistanceShadowMaskSupported");
             m_AdditionalLightShadowsSupportedProp = serializedObject.FindProperty("m_AdditionalLightShadowsSupported");
             m_AdditionalLightShadowmapResolutionProp = serializedObject.FindProperty("m_AdditionalLightsShadowmapResolution");
 
@@ -301,6 +304,7 @@ namespace UnityEditor.Rendering.Universal
 
                 disableGroup |= (m_AdditionalLightsPerObjectLimitProp.intValue == 0 || m_AdditionalLightsRenderingModeProp.intValue != (int)LightRenderingMode.PerPixel);
                 EditorGUI.BeginDisabledGroup(disableGroup);
+                EditorGUILayout.PropertyField(m_AdditionalLightDistanceShadowMaskSupportedProp, Styles.supportsAdditionalDistanceShadowMaskText);
                 EditorGUILayout.PropertyField(m_AdditionalLightShadowsSupportedProp, Styles.supportsAdditionalShadowsText);
                 EditorGUI.EndDisabledGroup();
 

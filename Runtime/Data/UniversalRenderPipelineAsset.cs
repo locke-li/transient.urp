@@ -173,6 +173,7 @@ namespace UnityEngine.Rendering.Universal
         [SerializeField] LightRenderingMode m_AdditionalLightsRenderingMode = LightRenderingMode.PerPixel;
         [SerializeField] int m_AdditionalLightsPerObjectLimit = 4;
         [SerializeField] bool m_AdditionalLightShadowsSupported = false;
+        [SerializeField] bool m_AdditionalLightDistanceShadowMaskSupported = false;
         [SerializeField] ShadowResolution m_AdditionalLightsShadowmapResolution = ShadowResolution._512;
 
         // Shadows Settings
@@ -596,6 +597,8 @@ namespace UnityEngine.Rendering.Universal
         {
             get { return m_AdditionalLightShadowsSupported; }
         }
+
+        public bool supportsAddtionalLightDistanceShadowMask => m_AdditionalLightDistanceShadowMaskSupported;
 
         public int additionalLightsShadowmapResolution
         {

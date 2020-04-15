@@ -938,6 +938,7 @@ namespace UnityEngine.Rendering.Universal
             lightData.shadeAdditionalLightsPerVertex = settings.additionalLightsRenderingMode == LightRenderingMode.PerVertex;
             lightData.visibleLights = visibleLights;
             lightData.supportsMixedLighting = settings.supportsMixedLighting;
+            lightData.supportsAddtionalLightDistanceShadowMask = settings.supportsAddtionalLightDistanceShadowMask;
         }
 
         static PerObjectData GetPerObjectLightFlags(int additionalLightsCount)

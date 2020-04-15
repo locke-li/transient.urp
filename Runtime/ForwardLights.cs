@@ -233,6 +233,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
             if (m_MixedLightingSetup == MixedLightingSetup.ShadowMask) {
                 lightOcclusionChannel.z = QualitySettings.shadowmaskMode == ShadowmaskMode.DistanceShadowmask ? 1 : 0;
+                lightOcclusionChannel.w = lightData.supportsAddtionalLightDistanceShadowMask ? 1 : 0;
                 cmd.SetGlobalVector(LightConstantBuffer._MainLightOcclusionProbe, lightOcclusionChannel);
             }
         }
