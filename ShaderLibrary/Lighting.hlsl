@@ -98,6 +98,31 @@ half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAtten
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//                        ShadowMask Functions                               /
+///////////////////////////////////////////////////////////////////////////////
+
+void MixShadowMask(inout Light light, half2 occlusionProbe, int mode, half4 shadowMask, float4 shadowCoord)
+{
+#if defined(_MIXED_LIGHTING_SHADOWMASK) && defined(LIGHTMAP_ON)
+	int channel = occlusionProbe.x;
+	half contribution = max(occlusionProbe.y, shadowMask[channel]);
+	if (mode == 0)
+	{//shadowmask mode, mix
+		light.shadowAttenuation = min(contribution, light.shadowAttenuation);
+	}
+	//TODO this check causes gap on the boundary,
+	//as shadowmap is truncated by sampling method,
+	//which seems to be different from checking (x <= 0 || x >= 1 || y <= 0 || y >= 1)
+	//without shadow cascade, camera distance matrix forms a rectangular area, and the gap shows
+	//with shadow cascade, the camera distance matrix limits the euclidean distance, results in a circular area, thus unaffected
+	else if (BEYOND_SHADOW_RANGE(shadowCoord))
+	{//distance shadowmask mode, no need to mix
+		light.shadowAttenuation = contribution;
+	}
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
 //                      Light Abstraction                                    //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -150,33 +175,30 @@ Light GetAdditionalPerObjectLight(int perObjectLightIndex, float3 positionWS, ha
     half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
     half attenuation = DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw);
 
+	float4 shadowCoord;
     Light light;
     light.direction = lightDirection;
-	light.shadowAttenuation = AdditionalLightRealtimeShadow(perObjectLightIndex, positionWS);
+	light.shadowAttenuation = AdditionalLightRealtimeShadow(perObjectLightIndex, positionWS, shadowCoord);
     light.distanceAttenuation = attenuation;
     light.color = color;
 
-    // In case we're using light probes, we can sample the attenuation from the `unity_ProbesOcclusion`
-#if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE) || defined(_MIXED_LIGHTING_SHADOWMASK)
-    // First find the probe channel from the light.
-    // Then sample `unity_ProbesOcclusion` for the baked occlusion.
-    // If the light is not baked, the channel is -1, and we need to apply no occlusion.
-
-    // probeChannel is the index in 'unity_ProbesOcclusion' that holds the proper occlusion value.
-    int probeChannel = lightOcclusionProbeInfo.x;
-
-    // lightProbeContribution is set to 0 if we are indeed using a probe, otherwise set to 1.w
-    half lightProbeContribution = lightOcclusionProbeInfo.y;
-#endif
-
+	// In case we're using light probes, we can sample the attenuation from the `unity_ProbesOcclusion`
 #if defined(LIGHTMAP_ON) || defined(_MIXED_LIGHTING_SUBTRACTIVE)
+	// First find the probe channel from the light.
+	// Then sample `unity_ProbesOcclusion` for the baked occlusion.
+	// If the light is not baked, the channel is -1, and we need to apply no occlusion.
+
+	// probeChannel is the index in 'unity_ProbesOcclusion' that holds the proper occlusion value.
+	int probeChannel = lightOcclusionProbeInfo.x;
+
+	// lightProbeContribution is set to 0 if we are indeed using a probe, otherwise set to 1.w
+	half lightProbeContribution = lightOcclusionProbeInfo.y;
+
 	half probeOcclusionValue = unity_ProbesOcclusion[probeChannel];
 	light.distanceAttenuation *= max(probeOcclusionValue, lightProbeContribution);
 #endif
 
-#if defined(LIGHTMAP_ON) && defined(_MIXED_LIGHTING_SHADOWMASK)
-	light.shadowAttenuation = min(light.shadowAttenuation, max(shadowMask[probeChannel], lightProbeContribution));
-#endif
+	MixShadowMask(light, lightOcclusionProbeInfo.xy, _MainLightOcclusionProbe.z * _MainLightOcclusionProbe.w, shadowMask, shadowCoord / shadowCoord.w);
 
     return light;
 }
@@ -525,27 +547,6 @@ void MixRealtimeAndBakedGI(inout Light light, half3 normalWS, inout half3 bakedG
 #endif
 }
 
-void MixShadowMask(inout Light light, half2 occlusionProbe, half4 shadowMask, float4 shadowCoord)
-{
-#if defined(_MIXED_LIGHTING_SHADOWMASK) && defined(LIGHTMAP_ON)
-    int channel = occlusionProbe.x;
-    half contribution = max(occlusionProbe.y, shadowMask[channel]);
-    if (_MainLightOcclusionProbe.w == 0)
-    {//shadowmask mode, mix
-        light.shadowAttenuation = min(contribution, light.shadowAttenuation);
-    }
-	//TODO this check causes gaps on the boundary,
-	//as shadowmap is truncated by sampling method,
-	//which seems to be different from checking (x <= 0 || x >= 1 || y <= 0 || y >= 1)
-    //on Unity 2019.3.4, with rectangular camera distance matrix, the gap shows
-    //on Unity 2019.3.6, the camera distance matrix limits the euclidean distance, results in a circular area, thus unaffected
-    else if (BEYOND_SHADOW_RANGE(shadowCoord))
-    {//distance shadowmask mode, no need to mix
-        light.shadowAttenuation = contribution;
-    }
-#endif
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //                      Lighting Functions                                   //
 ///////////////////////////////////////////////////////////////////////////////
@@ -605,7 +606,7 @@ half4 UniversalFragmentPBR(InputData inputData, half3 albedo, half metallic, hal
     Light mainLight = GetMainLight(inputData.shadowCoord);
 	half4 shadowMask = GET_SHADOWMASK(inputData);
     MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI);
-    MixShadowMask(mainLight, _MainLightOcclusionProbe.xy, shadowMask, inputData.shadowCoord);
+    MixShadowMask(mainLight, _MainLightOcclusionProbe.xy, _MainLightOcclusionProbe.z, shadowMask, inputData.shadowCoord);
 
     half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS);
     color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
@@ -614,6 +615,7 @@ half4 UniversalFragmentPBR(InputData inputData, half3 albedo, half metallic, hal
 
 #ifdef _ADDITIONAL_LIGHTS
     uint pixelLightCount = GetAdditionalLightsCount();
+	float4 shadowCoord;
     for (uint lightIndex = 0u; lightIndex < pixelLightCount; ++lightIndex)
     {
         Light light = GetAdditionalLight(lightIndex, inputData.positionWS, shadowMask);
@@ -634,7 +636,7 @@ half4 UniversalFragmentBlinnPhong(InputData inputData, half3 diffuse, half4 spec
     Light mainLight = GetMainLight(inputData.shadowCoord);
 	half4 shadowMask = GET_SHADOWMASK(inputData);
     MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI);
-    MixShadowMask(mainLight, _MainLightOcclusionProbe.xy, shadowMask, inputData.shadowCoord);
+    MixShadowMask(mainLight, _MainLightOcclusionProbe.xy, _MainLightOcclusionProbe.z, shadowMask, inputData.shadowCoord);
 
     half3 attenuatedLightColor = mainLight.color * (mainLight.distanceAttenuation * mainLight.shadowAttenuation);
     half3 diffuseColor = inputData.bakedGI + LightingLambert(attenuatedLightColor, mainLight.direction, inputData.normalWS);

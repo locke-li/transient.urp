@@ -50,7 +50,7 @@ float4 _ScaledScreenParams;
 
 float4 _MainLightPosition;
 half4 _MainLightColor;
-half4 _MainLightOcclusionProbe;//x: value, y:contribution, z: unused, w: is distance shadowmask mode
+half4 _MainLightOcclusionProbe;//x: value, y:contribution, z: is distance shadowmask mode, w: additional light use distance shadowmask mode
 
 half4 _AdditionalLightsCount;
 #if USE_STRUCTURED_BUFFER_FOR_LIGHT_DATA

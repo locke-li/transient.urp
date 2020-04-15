@@ -237,6 +237,7 @@ namespace UnityEngine.Rendering.Universal
         }
 
         (CameraData[] , CameraSetupData[]) SetupCamera(Camera[] cameras) {
+            //TODO GC
             var cameraSetup = new CameraSetupData[cameras.Length];
             var cameraData = new CameraData[cameras.Length];
             ref var lastSetup = ref cameraSetup[0];

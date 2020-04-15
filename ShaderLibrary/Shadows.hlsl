@@ -232,9 +232,10 @@ half MainLightRealtimeShadow(float4 shadowCoord)
     return SampleShadowmap(TEXTURE2D_ARGS(_MainLightShadowmapTexture, sampler_MainLightShadowmapTexture), shadowCoord, shadowSamplingData, shadowParams, false);
 }
 
-half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS)
+half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS, out float4 shadowCoord)
 {
 #if !defined(ADDITIONAL_LIGHT_CALCULATE_SHADOWS)
+	shadowCoord = 0;
     return 1.0h;
 #endif
 
@@ -249,9 +250,9 @@ half AdditionalLightRealtimeShadow(int lightIndex, float3 positionWS)
     if (lightIndex < 0)
         return 1.0;
 
-    float4 shadowCoord = mul(_AdditionalShadowsBuffer[lightIndex].worldToShadowMatrix, float4(positionWS, 1.0));
+    shadowCoord = mul(_AdditionalShadowsBuffer[lightIndex].worldToShadowMatrix, float4(positionWS, 1.0));
 #else
-    float4 shadowCoord = mul(_AdditionalLightsWorldToShadow[lightIndex], float4(positionWS, 1.0));
+    shadowCoord = mul(_AdditionalLightsWorldToShadow[lightIndex], float4(positionWS, 1.0));
 #endif
 
     half4 shadowParams = GetAdditionalLightShadowParams(lightIndex);
