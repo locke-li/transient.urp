@@ -1,11 +1,12 @@
 # unity_urp_modified
 modified Unity URP 7.3.1
 
-+ resume support for CameraClearFlags.DepthOnly.
-+ option to grab rendered texture after transparent rendering.
-+ per camera render scale \*1
-+ shadowmask \*2
-+ directional additional light shadow casting \*3
++=vanilla stack/overlay camera should work properly.
++\+resume support for CameraClearFlags.DepthOnly.
++\+option to grab rendered texture after transparent rendering.
++\+per camera render scale \*1
++\+shadowmask \*2
++\+directional additional light shadow casting \*3
 
 [Unity Companion License](https://unity3d.com/legal/licenses/Unity_Companion_License)
 
