@@ -18,6 +18,7 @@ namespace UnityEngine.Rendering.Universal {
         ScreenSpaceShadowResolvePass m_ScreenSpaceShadowResolvePass;
         DrawObjectsPass m_RenderOpaqueForwardPass;
         DrawSkyboxPass m_DrawSkyboxPass;
+        ClearDepthPass m_ClearDepthPass;
         CopyDepthPass m_CopyDepthPass;
         CopyColorPass m_CopyColorPass;
         CopyColorPass m_CopyColorTransparentPass;
@@ -80,6 +81,7 @@ namespace UnityEngine.Rendering.Universal {
             m_LoadColorPass = new LoadColorPass(RenderPassEvent.BeforeRenderingPrepasses, m_BlitFlipMaterial);
             m_MainLightShadowCasterPass = new MainLightShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
             m_AdditionalLightsShadowCasterPass = new AdditionalLightsShadowCasterPass(RenderPassEvent.BeforeRenderingShadows);
+            m_ClearDepthPass = new ClearDepthPass(RenderPassEvent.BeforeRenderingPrepasses);
             m_DepthPrepass = new DepthOnlyPass(RenderPassEvent.BeforeRenderingPrepasses, RenderQueueRange.opaque, data.opaqueLayerMask);
             m_ScreenSpaceShadowResolvePass = new ScreenSpaceShadowResolvePass(RenderPassEvent.BeforeRenderingPrepasses, m_ScreenspaceShadowsMaterial);
             m_ColorGradingLutPass = new ColorGradingLutPass(RenderPassEvent.BeforeRenderingPrepasses, data.postProcessData);
@@ -205,9 +207,8 @@ namespace UnityEngine.Rendering.Universal {
                 if (Camera.main == camera && camera.cameraType == CameraType.Game && cameraData.targetTexture == null)
                     SetupBackbufferFormat(backbufferMsaaSamples, isStereoEnabled);
             }
-            else {
-                m_ActiveCameraColorAttachment = m_CameraColorAttachment;
-                m_ActiveCameraDepthAttachment = m_CameraDepthAttachment;
+            else if (!setup.intermediateRenderTexture) {
+                EnqueuePass(m_ClearDepthPass);
             }
 
             ConfigureCameraTarget(m_ActiveCameraColorAttachment.Identifier(), m_ActiveCameraDepthAttachment.Identifier());
@@ -291,7 +292,7 @@ namespace UnityEngine.Rendering.Universal {
             //triggers BeforeRenderingPostProcessing
             EnqueuePass(m_OnRenderObjectCallbackPass);
 
-            bool lastCameraInTheStack = renderingData.resolveFinalTarget;
+            bool lastCameraInTheStack = renderingData.resolveFinalTarget && setup.intermediateRenderTexture;
             bool hasCaptureActions = renderingData.cameraData.captureActions != null && lastCameraInTheStack;
             bool applyFinalPostProcessing = anyPostProcessing && lastCameraInTheStack &&
                                      renderingData.cameraData.antialiasing == AntialiasingMode.FastApproximateAntialiasing;
