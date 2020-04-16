@@ -107,6 +107,9 @@ namespace UnityEngine.Rendering.Universal
             get => 8;
         }
 
+        private CameraSetupData[] CameraSetupBuffer { get; set; }
+        private CameraData[] CameraDataBuffer { get; set; }
+
         public UniversalRenderPipeline(UniversalRenderPipelineAsset asset)
         {
             SetSupportedRenderingFeatures();
@@ -237,11 +240,12 @@ namespace UnityEngine.Rendering.Universal
         }
 
         (CameraData[] , CameraSetupData[]) SetupCamera(Camera[] cameras) {
-            //TODO GC
-            var cameraSetup = new CameraSetupData[cameras.Length];
-            var cameraData = new CameraData[cameras.Length];
-            ref var lastSetup = ref cameraSetup[0];
-            ref var lastCameraData = ref cameraData[0];
+            if (CameraSetupBuffer == null || CameraSetupBuffer.Length < cameras.Length) { 
+                CameraSetupBuffer = new CameraSetupData[cameras.Length];
+                CameraDataBuffer = new CameraData[cameras.Length];
+            }
+            ref var lastSetup = ref CameraSetupBuffer[0];
+            ref var lastCameraData = ref CameraDataBuffer[0];
             //determine buffer operation depending on camera config/relation
             for (int i = 0; i < cameras.Length; ++i) {
                 var camera = cameras[i];
@@ -252,17 +256,17 @@ namespace UnityEngine.Rendering.Universal
 
                 //skip overlay camera outside of any stack
                 if (additionalCameraData != null && additionalCameraData.renderType != CameraRenderType.Base) {
-                    cameraSetup[i].stackingOption = StackingOption._OverlayInStack;
+                    CameraSetupBuffer[i].stackingOption = StackingOption._OverlayInStack;
                     continue;
                 }
 
-                InitializeCameraData(camera, additionalCameraData, out cameraData[i]);
-                InitializeCameraSetup(i, ref lastCameraData, ref cameraData[i], ref lastSetup, out cameraSetup[i]);
-                lastCameraData = ref cameraData[i];
-                lastSetup = ref cameraSetup[i];
+                InitializeCameraData(camera, additionalCameraData, out CameraDataBuffer[i]);
+                InitializeCameraSetup(i, ref lastCameraData, ref CameraDataBuffer[i], ref lastSetup, out CameraSetupBuffer[i]);
+                lastCameraData = ref CameraDataBuffer[i];
+                lastSetup = ref CameraSetupBuffer[i];
             }
 
-            return (cameraData, cameraSetup);
+            return (CameraDataBuffer, CameraSetupBuffer);
         }
 
         void InitializeCameraSetup(int i, ref CameraData lastCameraData, ref CameraData cameraData, ref CameraSetupData lastSetup, out CameraSetupData setup) {
