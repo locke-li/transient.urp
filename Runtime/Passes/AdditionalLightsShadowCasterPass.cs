@@ -118,7 +118,6 @@ namespace UnityEngine.Rendering.Universal.Internal
                             case LightType.Directional: {
                                     var resolution = ShadowUtils.GetMaxTileResolutionInAtlas(m_ShadowmapWidth, m_ShadowmapHeight, 1);
                                     success = ShadowUtils.ExtractDirectionalLightMatrix(ref renderingData.cullResults,
-                                        ref renderingData.shadowData,
                                         i,
                                         resolution,
                                         shadowLight.light.shadowNearPlane,
