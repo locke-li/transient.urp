@@ -25,6 +25,12 @@ namespace UnityEngine.Rendering.Universal
         FourCascades,
     }
 
+    public enum ShadowProjectionModeOption
+    {
+        CloseFit,
+        StableFit,
+    }
+
     [MovedFrom("UnityEngine.Rendering.LWRP")] public enum ShadowQuality
     {
         Disabled,
@@ -178,6 +184,7 @@ namespace UnityEngine.Rendering.Universal
 
         // Shadows Settings
         [SerializeField] float m_ShadowDistance = 50.0f;
+        [SerializeField] ShadowProjectionModeOption m_ShadowProjectionMode = ShadowProjectionModeOption.CloseFit;
         [SerializeField] ShadowCascadesOption m_ShadowCascades = ShadowCascadesOption.NoCascades;
         [SerializeField] float m_Cascade2Split = 0.25f;
         [SerializeField] Vector3 m_Cascade4Split = new Vector3(0.067f, 0.2f, 0.467f);
@@ -609,6 +616,12 @@ namespace UnityEngine.Rendering.Universal
         {
             get { return m_ShadowDistance; }
             set { m_ShadowDistance = Mathf.Max(0.0f, value); }
+        }
+
+        public ShadowProjectionModeOption shadowProjectionModeOption
+        {
+            get { return m_ShadowProjectionMode; }
+            set { m_ShadowProjectionMode = value; }
         }
 
         public ShadowCascadesOption shadowCascadeOption

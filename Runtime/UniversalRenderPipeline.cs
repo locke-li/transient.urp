@@ -903,6 +903,15 @@ namespace UnityEngine.Rendering.Universal
                     break;
             }
 
+            switch(settings.shadowProjectionModeOption) {
+                case ShadowProjectionModeOption.StableFit:
+                    shadowData.projectionMode = ShadowProjectionMode.StableFit;
+                    break;
+                default:
+                    shadowData.projectionMode = ShadowProjectionMode.CloseFit;
+                    break;
+            }
+
             shadowData.supportsAdditionalLightShadows = SystemInfo.supportsShadows && settings.supportsAdditionalLightShadows && additionalLightsCastShadows;
             shadowData.additionalLightsShadowmapWidth = shadowData.additionalLightsShadowmapHeight = settings.additionalLightsShadowmapResolution;
             shadowData.supportsSoftShadows = settings.supportsSoftShadows && (shadowData.supportsMainLightShadows || shadowData.supportsAdditionalLightShadows);

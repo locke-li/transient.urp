@@ -112,6 +112,11 @@ namespace UnityEngine.Rendering.Universal
         internal ScriptableRenderer renderer;
     }
 
+    public enum ShadowProjectionMode {
+        CloseFit = 0,
+        StableFit,
+    }
+
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct ShadowData
     {
         public bool supportsMainLightShadows;
@@ -125,6 +130,7 @@ namespace UnityEngine.Rendering.Universal
         public int additionalLightsShadowmapHeight;
         public bool supportsSoftShadows;
         public int shadowmapDepthBufferBits;
+        public ShadowProjectionMode projectionMode;
         public List<Vector4> bias;
     }
 

@@ -216,6 +216,7 @@ float4 TransformWorldToShadowCoord(float3 positionWS)
 #ifdef _MAIN_LIGHT_SHADOWS_CASCADE
     half cascadeIndex = ComputeCascadeIndex(positionWS);
 #else
+    //NOTE: this actually leads to light space clip value being used for shadow distance culling
     half cascadeIndex = 0;
 #endif
 

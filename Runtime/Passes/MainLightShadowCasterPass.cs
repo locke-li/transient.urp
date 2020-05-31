@@ -177,18 +177,20 @@ namespace UnityEngine.Rendering.Universal.Internal
                 }
 
                 bool softShadows = shadowLight.light.shadows == LightShadows.Soft && shadowData.supportsSoftShadows;
+                bool stableFit = shadowData.projectionMode == ShadowProjectionMode.StableFit;
+                bool enableCascade = shadowData.mainLightShadowCascadesCount > 1 || stableFit;
                 CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadows, true);
-                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadowCascades, shadowData.mainLightShadowCascadesCount > 1);
+                CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.MainLightShadowCascades, enableCascade);
                 CoreUtils.SetKeyword(cmd, ShaderKeywordStrings.SoftShadows, softShadows);
 
-                SetupMainLightShadowReceiverConstants(cmd, shadowLight, softShadows);
+                SetupMainLightShadowReceiverConstants(cmd, shadowLight, softShadows, enableCascade);
             }
 
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
 
-        void SetupMainLightShadowReceiverConstants(CommandBuffer cmd, VisibleLight shadowLight, bool softShadows)
+        void SetupMainLightShadowReceiverConstants(CommandBuffer cmd, VisibleLight shadowLight, bool softShadows, bool enableCascade)
         {
             Light light = shadowLight.light;
 
@@ -213,7 +215,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             cmd.SetGlobalMatrixArray(MainLightShadowConstantBuffer._WorldToShadow, m_MainLightShadowMatrices);
             cmd.SetGlobalVector(MainLightShadowConstantBuffer._ShadowParams, new Vector4(light.shadowStrength, softShadowsProp, 0.0f, 0.0f));
 
-            if (m_ShadowCasterCascadesCount > 1)
+            if (enableCascade)
             {
                 cmd.SetGlobalVector(MainLightShadowConstantBuffer._CascadeShadowSplitSpheres0,
                     m_CascadeSplitDistances[0]);

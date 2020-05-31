@@ -51,6 +51,7 @@ namespace UnityEditor.Rendering.Universal
 
             // Shadow settings
             public static GUIContent shadowDistanceText = EditorGUIUtility.TrTextContent("Distance", "Maximum shadow rendering distance.");
+            public static GUIContent shadowProjectionModeText = EditorGUIUtility.TrTextContent("Projection Mode", "Shadow projection mode. *Since Close Fit mode is not implemented yet, currently this is only used to force cacade calculation when No Cascade/Stable Fit is selected");
             public static GUIContent shadowCascadesText = EditorGUIUtility.TrTextContent("Cascades", "Number of cascade splits used in for directional shadows");
             public static GUIContent shadowDepthBias = EditorGUIUtility.TrTextContent("Depth Bias", "Controls the distance at which the shadows will be pushed away from the light. Useful for avoiding false self-shadowing artifacts.");
             public static GUIContent shadowNormalBias = EditorGUIUtility.TrTextContent("Normal Bias", "Controls distance at which the shadow casting surfaces will be shrunk along the surface normal. Useful for avoiding false self-shadowing artifacts.");
@@ -86,6 +87,7 @@ namespace UnityEditor.Rendering.Universal
             // Dropdown menu options
             public static string[] mainLightOptions = { "Disabled", "Per Pixel" };
             public static string[] shadowCascadeOptions = {"No Cascades", "Two Cascades", "Four Cascades"};
+            public static string[] shadowProjectionModeOptions = {"Close Fit", "Stable Fit"};
             public static string[] opaqueDownsamplingOptions = {"None", "2x (Bilinear)", "4x (Box)", "4x (Bilinear)"};
         }
 
@@ -121,6 +123,7 @@ namespace UnityEditor.Rendering.Universal
         SerializedProperty m_AdditionalLightShadowmapResolutionProp;
 
         SerializedProperty m_ShadowDistanceProp;
+        SerializedProperty m_shadowProjectionModeProp;
         SerializedProperty m_ShadowCascadesProp;
         SerializedProperty m_ShadowCascade2SplitProp;
         SerializedProperty m_ShadowCascade4SplitProp;
@@ -191,6 +194,7 @@ namespace UnityEditor.Rendering.Universal
             m_AdditionalLightShadowmapResolutionProp = serializedObject.FindProperty("m_AdditionalLightsShadowmapResolution");
 
             m_ShadowDistanceProp = serializedObject.FindProperty("m_ShadowDistance");
+            m_shadowProjectionModeProp = serializedObject.FindProperty("m_ShadowProjectionMode");
             m_ShadowCascadesProp = serializedObject.FindProperty("m_ShadowCascades");
             m_ShadowCascade2SplitProp = serializedObject.FindProperty("m_Cascade2Split");
             m_ShadowCascade4SplitProp = serializedObject.FindProperty("m_Cascade4Split");
@@ -329,6 +333,7 @@ namespace UnityEditor.Rendering.Universal
             {
                 EditorGUI.indentLevel++;
                 m_ShadowDistanceProp.floatValue = Mathf.Max(0.0f, EditorGUILayout.FloatField(Styles.shadowDistanceText, m_ShadowDistanceProp.floatValue));
+                CoreEditorUtils.DrawPopup(Styles.shadowProjectionModeText, m_shadowProjectionModeProp, Styles.shadowProjectionModeOptions);
                 CoreEditorUtils.DrawPopup(Styles.shadowCascadesText, m_ShadowCascadesProp, Styles.shadowCascadeOptions);
 
                 ShadowCascadesOption cascades = (ShadowCascadesOption)m_ShadowCascadesProp.intValue;
