@@ -23,6 +23,14 @@ namespace UnityEngine.Rendering.Universal.Internal
             renderPassEvent = evt;
         }
 
+        //Renderer2D compatible
+        public FinalBlitPass(RenderPassEvent evt, Material blitMaterial)
+        {
+            m_BlitMaterial = blitMaterial;
+            m_BlendBlitMaterial = null;
+            renderPassEvent = evt;
+        }
+
         /// <summary>
         /// Configure the pass
         /// </summary>
@@ -33,6 +41,14 @@ namespace UnityEngine.Rendering.Universal.Internal
             m_Source = colorHandle;
             m_TargetDimension = baseDescriptor.dimension;
             m_EffectiveBlitMaterial = stackingOption == StackingOption.Blend ? m_BlendBlitMaterial : m_BlitMaterial;
+        }
+
+        //Renderer2D compatible
+        public void Setup(RenderTextureDescriptor baseDescriptor, RenderTargetHandle colorHandle)
+        {
+            m_Source = colorHandle;
+            m_TargetDimension = baseDescriptor.dimension;
+            m_EffectiveBlitMaterial = m_BlitMaterial;
         }
 
         /// <inheritdoc/>
@@ -50,6 +66,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             RenderTargetIdentifier cameraTarget = (cameraData.targetTexture != null) ? new RenderTargetIdentifier(cameraData.targetTexture) : BuiltinRenderTextureType.CameraTarget;
 
             bool requiresSRGBConvertion = Display.main.requiresSrgbBlitToBackbuffer;
+            bool isSceneViewCamera = cameraData.isSceneViewCamera;
 
             // For stereo case, eye texture always want color data in sRGB space.
             // If eye texture color format is linear, we do explicit sRGB convertion
@@ -68,7 +85,7 @@ namespace UnityEngine.Rendering.Universal.Internal
             // The blit will be reworked for stereo along the XRSDK work.
             Material blitMaterial = (cameraData.isStereoEnabled) ? null : m_BlitMaterial;
             cmd.SetGlobalTexture("_BlitTex", m_Source.Identifier());
-            if (cameraData.isStereoEnabled || cameraData.isSceneViewCamera || cameraData.isDefaultViewport)
+            if (cameraData.isStereoEnabled || isSceneViewCamera || cameraData.isDefaultViewport)
             {
                 // This set render target is necessary so we change the LOAD state to DontCare.
                 cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget,
