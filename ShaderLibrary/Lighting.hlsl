@@ -106,19 +106,26 @@ void MixShadowMask(inout Light light, half2 occlusionProbe, int mode, half4 shad
 #if defined(_MIXED_LIGHTING_SHADOWMASK) && defined(LIGHTMAP_ON)
 	int channel = occlusionProbe.x;
 	half contribution = max(occlusionProbe.y, shadowMask[channel]);
-	if (mode == 0)
-	{//shadowmask mode, mix
+	bool mixMode =
+#ifndef _MAIN_LIGHT_SHADOWS_CASCADE
+		//fix situation of when a shadow caster is culled, but its intended shadow still lies within shadow distance
+		true;
+#else
+		mode == 0;//shadowmask mode
+#endif
+	if (mixMode)
+	{
 		light.shadowAttenuation = min(contribution, light.shadowAttenuation);
 	}
-	//TODO this check causes gap on the boundary,
-	//as shadowmap is truncated by sampling method,
-	//which seems to be different from checking (x <= 0 || x >= 1 || y <= 0 || y >= 1)
-	//without shadow cascade, camera distance matrix forms a rectangular area, and the gap shows
-	//with shadow cascade, the camera distance matrix limits the euclidean distance, results in a circular area, thus unaffected
+	//this check can causes gap on the boundary when no shadow cascade is selected, as shadowmap is truncated at border
+	//should be fixed by the above forced mix
+	//without shadow cascade, light clip space matrix forms a rectangular area, and the gap shows
+	//with shadow cascade, the light culling spheres limit the euclidean distance, results in a circular area, thus unaffected
 	else if (BEYOND_SHADOW_RANGE(shadowCoord))
 	{//distance shadowmask mode, no need to mix
 		light.shadowAttenuation = contribution;
 	}
+
 #endif
 }
 
