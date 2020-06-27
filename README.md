@@ -13,4 +13,4 @@ Customized Unity URP
 *\*1 Implemented through blit with blending. Due to 1. gamma blending 2. premultipled alpha, a ~2.5% error is accumulated when rendering in Gamma space, in Linear space, the error is much smaller.*<br/>
 *\*2 Force shadow mixing in distance shadowmask mode to avoid gap artefact.*<br/>
 *\*3 Shadow cascade not implemented.*<br/>
-*\*4 Package identifier remains "com.unity.render-pipelines.universal" for compatibility
+*\*4 Package identifier remains "com.unity.render-pipelines.universal" for compatibility.*<br/>
